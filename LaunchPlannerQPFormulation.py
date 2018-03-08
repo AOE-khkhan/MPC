@@ -92,7 +92,7 @@ bin = np.vstack((binForce, binPositionMax, binPositionMin))
 ## Setup the objective function
 ## This is basically the desired states, typically x and the final v
 xnominal = 0.0;
-xdes = np.array([[0, -0.1, -0.1, 0.1]]).T
+xdes = np.zeros((nodes, 1))
 
 ## Add the entire x trajectory to the objcetive
 J = xi
@@ -102,14 +102,14 @@ Jvf = vi[nodes - 1, :]
 cvf = vf - v0
 
 ## Normailze the forces so that they are reduced as much as possible
-Jforce = np.identity(2*nodes)
-cforce = np.zeros((2*nodes, 1))
+Jforce = np.identity( 2 * nodes)
+cforce = np.zeros(( 2 * nodes, 1))
 
 J = np.vstack((J, Jvf, Jforce))
 c = np.vstack((c, cvf, cforce))
 
-W = np.identity(13)
-W[nodes, nodes] *= 12 * 100000000
+W = np.identity(nodes * 3 + 1)
+W[nodes, nodes] *= 3 * nodes * 100000000
 Jt = J.transpose()
 JtW = Jt.dot(W)
 Q = JtW.dot(J)
@@ -142,4 +142,4 @@ for i in range(nodes):
     fVals[i, 0] = fOpt[2*i, 0]
     mVals[i, 0] = fOpt[2*i + 1, 0]
 
-Plotter.plotResults(fVals, mVals, nodes, 0, deltaT, 0, 0)
+Plotter.plotResults(fVals, mVals, nodes, mass, deltaT, x0, v0)
