@@ -146,16 +146,16 @@ tasks += 1
 # Normalize the forces so that they are reduced as much as possible
 Jforce = np.identity(2 * nodes - 4)
 cforce = np.zeros((2 * nodes - 4, 1))
-# tasks += 2 * nodes - 4
+tasks += 2 * nodes - 4
 
-J = np.vstack((J, Jvf))
-c = np.vstack((c, cvf))
+J = np.vstack((J, Jvf, Jforce))
+c = np.vstack((c, cvf, cforce))
 #J = np.array([Jvf])
 #c = cvf
 #tasks = 1
 
 W = np.identity(tasks)
-#W[nodes - 1, nodes - 1] *= 3 * nodes * 100000000
+W[nodes:, nodes:] *= 1/(10000**2)
 Jt = J.transpose()
 JtW = Jt.dot(W)
 Q = JtW.dot(J)
