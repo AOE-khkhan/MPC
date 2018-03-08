@@ -2,6 +2,7 @@ import numpy as np
 from cvxopt import solvers
 from cvxopt import  matrix
 import scipy as sci
+import Plotter
 
 # This code generates a trajectory for linear centroidal dynamics by optimizing
 # the knot points for a cubic spline interpolated force trajectory to minimize the
@@ -135,3 +136,10 @@ print(xOpt)
 print("Velocity profile: ", vf)
 print(vOpt)
 
+fVals = np.zeros((nodes, 1))
+mVals = np.zeros((nodes, 1))
+for i in range(nodes):
+    fVals[i, 0] = fOpt[2*i, 0]
+    mVals[i, 0] = fOpt[2*i + 1, 0]
+
+Plotter.plotResults(fVals, mVals, nodes, 0, deltaT, 0, 0)
