@@ -87,6 +87,13 @@ for i in range(nodes):
 Ain = np.vstack((AinForce, AinPositionMax, AinPositionMin))
 bin = np.vstack((binForce, binPositionMax, binPositionMin))
 
+Aeq = np.zeros((4, 2 * nodes))
+Aeq[0, 0] = 1
+Aeq[1, 1] = 1
+Aeq[2, 2 * nodes - 2] = 1
+Aeq[3, 2 * nodes - 1] = 1
+beq = np.zeros((4, 1))
+
 ## Setup the objective function
 ## This is basically the desired states, typically x and the final v
 xnominal = 0.0;
@@ -118,8 +125,10 @@ P = matrix(Q, tc='d')
 q = matrix(f, tc='d')
 G = matrix(Ain, tc='d')
 h = matrix(bin, tc='d')
+A = matrix(Aeq, tc='d')
+b = matrix(beq, tc='d')
 
-soln = solvers.qp(P, q, G, h)
+soln = solvers.qp(P, q, G, h, A, b)
 fOpt = soln['x']
 
 vOpt = vi.dot(fOpt) + v0
