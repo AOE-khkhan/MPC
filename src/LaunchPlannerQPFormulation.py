@@ -1,8 +1,7 @@
 import numpy as np
 from cvxopt import solvers
 from cvxopt import  matrix
-import scipy as sci
-import Plotter
+from src import Plotter
 
 # This code generates a trajectory for linear centroidal dynamics by optimizing
 # the knot points for a cubic spline interpolated force trajectory to minimize the
@@ -10,7 +9,6 @@ import Plotter
 # constraints on the final state are met
 #
 # defining the number of knot points.
-from scipy.sparse.linalg.isolve.minres import Ainfo
 
 nodes = 4
 # decision variables [f0, m0, f1, m1, f2, m2, f3, m3]
