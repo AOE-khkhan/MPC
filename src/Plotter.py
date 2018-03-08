@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 
-sampling = 10
+sampling = 100
 
 def plotResults(f, m, n, mass, deltaT, x0, v0):
     tData = getTimeData(n, deltaT)

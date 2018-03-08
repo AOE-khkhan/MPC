@@ -12,7 +12,7 @@ from src import Plotter
 #
 # defining the number of knot points.
 
-nodes = 4
+nodes = 15
 # decision variables [f1, m1, .... f(nodes - 2), m(nodes - 2)]
 # fi = force value mi = derivative of force
 # The first and last knot points are considered fixed and removed from the optimization
@@ -24,10 +24,10 @@ v0 = 0.0  # m/s
 # vf is the critical parameter that must be achieved
 hDes = 0.35  # m
 g = -9.81  # m/s^2
-mass = 1 / 60.0  # kg
+mass = 18  # kg
 xf = 1.0
 vf = np.sqrt(-2.0 * g * hDes)  # m/s
-deltaT = 5.0 / nodes  # s
+deltaT = 1.0 / nodes  # s
 
 fmin = mass * g
 fmax = mass * g - mass * g * 1.5  # assuming robot can lift 2 times its weight
@@ -39,10 +39,10 @@ xmin = 0.5
 xnominal = 0.0
 xdes = np.zeros((nodes - 1, 1))
 
-f0 = 0
-m0 = 0
-ff = 0
-mf = 0
+f0 = 0.0
+m0 = 0.0
+ff = 0.0
+mf = 0.0
 
 # Calculate the unknown state variables in terms of the decision variables. These are the transformation matrices
 # The initial conditions add on linearly as a constant (the constant is the same for the velocity matrix. i.e. v0
@@ -112,11 +112,10 @@ binPositionMax[nodes - 2, 0] -= delxf
 AinPositionMin = -xi[1:, :]
 binPositionMin = -np.ones((nodes - 1, 1)) * (xmin - x0 - delx0)
 binPositionMin[nodes - 2, 0] += delxf
+
 for i in range(0, nodes - 1):
-    binPositionMax[i, 0] -= i * deltaT * (v0 + delv0)
-    binPositionMin[i, 0] += i * deltaT * (v0 + delv0)
-#binPositionMax[nodes - 2, 0] -= deltaT * (delvf)
-#binPositionMin[nodes - 2, 0] += deltaT * (delvf)
+    binPositionMax[i, 0] -= (i + 1) * deltaT * v0 + i * deltaT *delv0
+    binPositionMin[i, 0] += (i + 1) * deltaT * v0 + i * deltaT *delv0
 
 Ain = np.vstack((AinForce, AinPositionMax, AinPositionMin))
 Bin = np.vstack((binForce, binPositionMax, binPositionMin))
@@ -149,11 +148,16 @@ Jforce = np.identity(2 * nodes - 4)
 cforce = np.zeros((2 * nodes - 4, 1))
 tasks += 2 * nodes - 4
 
-J = np.vstack((J, Jvf, Jforce))
-c = np.vstack((c, cvf, cforce))
+#J = np.vstack((J, Jvf, Jforce))
+#c = np.vstack((c, cvf, cforce))
+J = np.array([Jvf])
+c = cvf
+tasks = 1
 
 W = np.identity(tasks)
-W[nodes - 1, nodes - 1] *= 3 * nodes * 100000000
+print(J)
+print(W)
+#W[nodes - 1, nodes - 1] *= 3 * nodes * 100000000
 Jt = J.transpose()
 JtW = Jt.dot(W)
 Q = JtW.dot(J)
@@ -171,11 +175,14 @@ h = matrix(Bin, tc='d')
 soln = solvers.qp(P, q, G, h)
 fOpt = soln['x']
 
-vOpt = vi.dot(fOpt) + v0
+vOpt = vi.dot(fOpt) + v0 + delv0
+vOpt[0, 0] -= delv0
+vOpt[nodes - 1, 0] += delvf
 xOpt = xi.dot(fOpt)
-for i in range(nodes):
-    xOpt[i] += x0 + i * deltaT * v0
-
+xOpt[0, 0] += x0
+for i in range(1, nodes):
+    xOpt[i] += x0 + delx0 +  i * deltaT * v0 + (i-1) * deltaT * delv0
+xOpt[nodes -1, 0] += delxf
 print("Force profile:")
 print(fOpt)
 print("Position profile:")
