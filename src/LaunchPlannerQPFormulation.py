@@ -18,11 +18,11 @@ nodes = 15
 # The first and last knot points are considered fixed and removed from the optimization
 
 # initial states [x0 v0]
-x0 = 0.75  # m
+x0 = 0.65  # m
 v0 = 0.0  # m/s
 # final states [xf vf]  typically want to impose xf as a bound rather than a value
 # vf is the critical parameter that must be achieved
-hDes = 0.35  # m
+hDes = 0.0  # m
 g = -9.81  # m/s^2
 mass = 18  # kg
 xf = 1.0
@@ -33,11 +33,11 @@ fmin = mass * g
 fmax = mass * g - mass * g * 1.5  # assuming robot can lift 2 times its weight
 mmin = -2
 mmax = 2
-xmax = 0.8
+xmax = 0.82
 xmin = 0.5
 
-xnominal = 0.0
-xdes = np.zeros((nodes - 1, 1))
+xnominal = x0 * 1.1
+xdes = np.array([[x0 - 0.15 * np.sin(2 * np.pi * i / (nodes - 1))] for i in range(nodes - 1)])
 
 f0 = 0.0
 m0 = 0.0
@@ -127,36 +127,34 @@ Bin = np.vstack((binForce, binPositionMax, binPositionMin))
 #Aeq[3, 2 * nodes - 1] = 1
 #beq = np.zeros((4, 1))
 
-## Setup the objective function
-## This is basically the desired states, typically x and the final v
-xnominal = 0.0;
-xdes = np.zeros((nodes -1, 1))
-
 # Setup the objective function
 # This is basically the desired states, typically x and the final v
 tasks = 0
 # Add the entire x trajectory to the objective
 J = xi[1:,:]
-c = xdes
+c = xdes - x0
+for i in range(1, nodes):
+    c[i - 1, 0] -= delx0 +  i * deltaT * v0 + (i-1) * deltaT * delv0
+c[nodes - 2, 0] += delxf
 tasks += nodes - 1
+
 # Adding the final v value to the objective
 Jvf = vi[nodes - 1, :]
 cvf = vf - v0 - delv0 - delvf
 tasks += 1
+
 # Normalize the forces so that they are reduced as much as possible
 Jforce = np.identity(2 * nodes - 4)
 cforce = np.zeros((2 * nodes - 4, 1))
-tasks += 2 * nodes - 4
+# tasks += 2 * nodes - 4
 
-#J = np.vstack((J, Jvf, Jforce))
-#c = np.vstack((c, cvf, cforce))
-J = np.array([Jvf])
-c = cvf
-tasks = 1
+J = np.vstack((J, Jvf))
+c = np.vstack((c, cvf))
+#J = np.array([Jvf])
+#c = cvf
+#tasks = 1
 
 W = np.identity(tasks)
-print(J)
-print(W)
 #W[nodes - 1, nodes - 1] *= 3 * nodes * 100000000
 Jt = J.transpose()
 JtW = Jt.dot(W)
