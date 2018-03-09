@@ -28,31 +28,32 @@ v0 = np.array([[0.0], [0.0], [0.0]])  # m/s
 # final states [xf vf]  typically want to impose xf as a bound rather than a value
 # vf is the critical parameter that must be achieved
 hDes = 0.0  # m
-g = np.array([[0.0],[0.0],[-9.81]])  # m/s^2
-mass = 1/12  # kg
+g = np.array([[0.0], [0.0], [-9.81]])  # m/s^2
+mass = 18  # kg
 # xf = 1.0
-vf = np.array([[0.0], [0.0], [np.sqrt(-2.0 * g[zaxis] * hDes)]]) # m/s
+vf = np.array([[0.0], [0.0], [np.sqrt(-2.0 * g[zaxis] * hDes)]])  # m/s
 # Jump timing
-tLaunch = nodes
+tLaunch = 1.0
 deltaT = tLaunch / nodes  # s
 
 mu = 0.6
 fmin = mass * g * 0
 fmax = -mass * g * 1.5  # assuming robot can lift 2 times its weight
-mmin = np.array([[-2.0],[-2.0],[-2.0]])
-mmax = np.array([[2.0],[2.0],[2.0]])
-xmax = np.array([[0.1],[0.05],[0.8]])
-xmin = np.array([[-0.1],[-0.05],[0.5]])
+mmin = np.array([[-2.0], [-2.0], [-2.0]])
+mmax = np.array([[2.0], [2.0], [2.0]])
+xmax = np.array([[0.1], [0.05], [0.8]])
+xmin = np.array([[-0.1], [-0.05], [0.5]])
 
 xdes = np.zeros((naxis * (nodes - 1), 1))
+amp = np.array([[0.0],[1.0],[0.15]])
 for i in range(nodes - 1):
-    xdes[naxis * i : naxis * (i+1)] = x0
+    xdes[naxis * i: naxis * (i + 1)] = x0 - amp * np.sin(np.pi * i / (nodes - 2))
     pass
 
 f0 = - mass * g
-m0 = np.array([[0.0],[0.0],[0.0]])
-ff = -mass * g
-mf = np.array([[0.0],[0.0],[0.0]])
+m0 = np.array([[0.0], [0.0], [0.0]])
+ff = - mass * g
+mf = np.array([[0.0], [0.0], [0.0]])
 
 # Calculate the unknown state variables in terms of the decision variables. These are the transformation matrices
 # The initial conditions add on linearly as a constant (the constant is the same for the velocity matrix. i.e. v0
@@ -112,14 +113,14 @@ for k in range(naxis):
 # Since we are also imposing the friction constraint this can be written only in terms of the z force
 # Reduces the total number of constraints
 forceMultiplier = 2 + 2 * naxis
-AinForce = np.zeros((forceMultiplier * (nodes - 2) , naxis * 2 * (nodes - 2)))
+AinForce = np.zeros((forceMultiplier * (nodes - 2), naxis * 2 * (nodes - 2)))
 binForce = np.zeros((forceMultiplier * (nodes - 2), 1))
 for i in range(nodes - 2):
     AinForce[forceMultiplier * i, (2 * i) * naxis + zaxis] = 1 + mu
-    binForce[forceMultiplier * i, 0] = fmax[zaxis,0]
+    binForce[forceMultiplier * i, 0] = fmax[zaxis, 0]
 
-    AinForce[forceMultiplier * i + 1, (2 * i) * naxis + zaxis] = -1 - mu
-    binForce[forceMultiplier * i + 1, 0] = -fmin[zaxis,0]
+    AinForce[forceMultiplier * i + 1, (2 * i) * naxis + zaxis] = -1
+    binForce[forceMultiplier * i + 1, 0] = -fmin[zaxis, 0]
 
     for j in range(naxis):
         AinForce[forceMultiplier * i + 2 * j + 2, (2 * i + 1) * naxis + j] = 1
@@ -135,7 +136,7 @@ binFriction = np.zeros((4 * (nodes - 2), 1))
 for i in range(nodes - 2):
     for k in range(4):
         AinFriction[4 * i + k, naxis * 2 * i + xaxis] = np.power(-1, k)
-        AinFriction[4 * i + k, naxis * 2 * i + yaxis] = np.power(-1, int(k/2))
+        AinFriction[4 * i + k, naxis * 2 * i + yaxis] = np.power(-1, int(k / 2))
         AinFriction[4 * i + k, naxis * 2 * i + zaxis] = -mu
         pass
     pass
@@ -143,19 +144,20 @@ for i in range(nodes - 2):
 # Setup the position limit constraints
 AinPositionMax = pi[naxis:, :]
 AinPositionMin = -pi[naxis:, :]
-binPositionMax = np.zeros((naxis * (nodes - 1), 1)) #* (xmax - x0 - delx0 - delxg)
-binPositionMin = np.zeros((naxis * (nodes - 1), 1)) #* (xmin - x0 - delx0 - delxg)
-
-for i in range(0, nodes - 1):
-    binPositionMax[naxis * i : naxis * (i+1), :] = +(xmax - x0 - delx0 - (i * i) / 2.0 * delxg - (i + 1) * deltaT * v0 - i * deltaT * delv0)
-    binPositionMin[naxis * i : naxis * (i+1), :] = -(xmin - x0 - delx0 - (i * i) / 2.0 * delxg - (i + 1) * deltaT * v0 - i * deltaT * delv0)
+binPositionMax = np.zeros((naxis * (nodes - 1), 1))  # * (xmax - x0 - delx0 - delxg)
+binPositionMin = np.zeros((naxis * (nodes - 1), 1))  # * (xmin - x0 - delx0 - delxg)
+for i in range(1, nodes):
+    binPositionMax[naxis * (i - 1): naxis * i, :] = +(
+                xmax - x0 - delx0 - i * deltaT * v0 - (i - 1) * deltaT * delv0 - i * i * delxg)
+    binPositionMin[naxis * (i - 1): naxis * i, :] = -(
+                xmin - x0 - delx0 - i * deltaT * v0 - (i - 1) * deltaT * delv0 - i * i * delxg)
     pass
 binPositionMax[naxis * (nodes - 2): naxis * (nodes - 1), :] -= delxf
 binPositionMin[naxis * (nodes - 2): naxis * (nodes - 1), :] += delxf
 
 # Compile all the constraints
-Ain = np.vstack((AinForce, AinFriction, AinPositionMin))
-Bin = np.vstack((binForce, binFriction, binPositionMin))
+Ain = np.vstack((AinForce, AinFriction, AinPositionMax, AinPositionMin))
+Bin = np.vstack((binForce, binFriction, binPositionMax, binPositionMin))
 
 ## Setup the objective function
 tasks = 0
@@ -164,8 +166,8 @@ tasks = 0
 J = pi[naxis * 1:, :]
 c = xdes
 for i in range(1, nodes):
-    c[naxis * (i - 1) : naxis * i, :] -= x0 + delx0 + i * deltaT * v0 + (i-1) * deltaT * delv0 + (i-1) * (i-1)/ 2.0 *delxg
-c[naxis * (nodes - 2): naxis *(nodes - 1), :] += delxf
+    c[naxis * (i - 1): naxis * i, :] -= x0 + delx0 + i * deltaT * v0 + (i - 1) * deltaT * delv0 + (i * i) * delxg
+c[naxis * (nodes - 2): naxis * (nodes - 1), :] -= delxf
 tasks += naxis * (nodes - 1)
 
 # Adding the final v value to the objective
@@ -182,7 +184,7 @@ J = np.vstack((J, Jvf, Jforce))
 c = np.vstack((c, cvf, cforce))
 
 W = np.identity(tasks)
-W[naxis * nodes:, naxis * nodes:] *= 1/(10000**2)
+W[naxis * nodes:, naxis * nodes:] *= 1 / (10000 ** 2)
 Jt = J.transpose()
 JtW = Jt.dot(W)
 Q = JtW.dot(J)
@@ -197,37 +199,53 @@ h = matrix(Bin, tc='d')
 soln = solvers.qp(P, q, G, h)
 fOpt = soln['x']
 
-vOpt = vi.dot(fOpt)
+fVals = np.zeros((naxis * nodes, 1))
+mVals = np.zeros((naxis * nodes, 1))
+fVals[0: naxis, :] = f0 + mass * g
+mVals[0: naxis, :] = m0
+for i in range(1, nodes - 1):
+    fVals[i * naxis: (i + 1) * naxis, :] = fOpt[2 * (i - 1) * naxis: 2 * (i - 1) * naxis + naxis, :] + mass * g
+    mVals[i * naxis: (i + 1) * naxis, :] = fOpt[2 * (i - 1) * naxis + naxis: 2 * i * naxis, :]
+fVals[(nodes - 1) * naxis: nodes * naxis, :] = ff + mass * g
+mVals[(nodes - 1) * naxis: nodes * naxis, :] = mf
+
+fxVals = np.zeros((nodes, 1))
+fyVals = np.zeros((nodes, 1))
+fzVals = np.zeros((nodes, 1))
+mxVals = np.zeros((nodes, 1))
+myVals = np.zeros((nodes, 1))
+mzVals = np.zeros((nodes, 1))
 
 for i in range(nodes):
-    vOpt[naxis * i: naxis * (i + 1), :] +=  v0 + delv0 + i * delvg
-vOpt[naxis * 0: naxis * (0 + 1), :] -= delv0
-vOpt[naxis * (nodes - 1): naxis * ((nodes - 1) + 1), :] += delvf
+    fxVals[i, 0] = fVals[naxis * i + xaxis]
+    fyVals[i, 0] = fVals[naxis * i + yaxis]
+    fzVals[i, 0] = fVals[naxis * i + zaxis]
 
-print(vOpt)
+    mxVals[i, 0] = mVals[naxis * i + xaxis]
+    myVals[i, 0] = mVals[naxis * i + yaxis]
+    mzVals[i, 0] = mVals[naxis * i + zaxis]
+    pass
 
-exit()
+Plotter.plotResults(fxVals, mxVals, nodes, mass, deltaT, x0[xaxis], v0[xaxis])
+Plotter.plotResults(fyVals, myVals, nodes, mass, deltaT, x0[yaxis], v0[yaxis])
+Plotter.plotResults(fzVals, mzVals, nodes, mass, deltaT, x0[zaxis], v0[zaxis])
 
-xOpt = pi.dot(fOpt)
-xOpt[0, 0] += x0
-for i in range(1, nodes):
-    xOpt[i] += x0 + delx0 +  i * deltaT * v0 + (i-1) * deltaT * delv0
-xOpt[nodes -1, 0] += delxf
-print("Force profile:")
-print(fOpt)
-print("Position profile:")
-print(xOpt)
-print("Velocity profile: ", vf)
-print(vOpt)
+# vOpt = vi.dot(fOpt)
+# for i in range(nodes):
+#     vOpt[naxis * i: naxis * (i + 1), :] += v0 + delv0 + i * delvg
+# vOpt[naxis * 0: naxis * (0 + 1), :] -= delv0
+# vOpt[naxis * (nodes - 1): naxis * ((nodes - 1) + 1), :] += delvf
+# print(vOpt)
+# exit()
 
-fVals = np.zeros((nodes, 1))
-mVals = np.zeros((nodes, 1))
-fVals[0, 0] = f0
-mVals[0, 0] = m0
-for i in range(1, nodes - 1):
-    fVals[i, 0] = fOpt[2 * i - 2, 0]
-    mVals[i, 0] = fOpt[2 * i - 1, 0]
-fVals[nodes - 1, 0] = ff
-mVals[nodes - 1, 0] = mf
-
-Plotter.plotResults(fVals, mVals, nodes, mass, deltaT, x0, v0)
+# xOpt = pi.dot(fOpt)
+# xOpt[0, 0] += x0
+# for i in range(1, nodes):
+#     xOpt[i] += x0 + delx0 + i * deltaT * v0 + (i - 1) * deltaT * delv0
+# xOpt[nodes - 1, 0] += delxf
+# print("Force profile:")
+# print(fOpt)
+# print("Position profile:")
+# print(xOpt)
+# print("Velocity profile: ", vf)
+# print(vOpt)
