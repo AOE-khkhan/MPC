@@ -3,7 +3,7 @@ from cvxopt import solvers
 from cvxopt import matrix
 from numpy.matlib import zeros
 
-from src import Plotter
+from src import Plotter, HelperFuncs
 
 # This code generates a trajectory for linear centroidal dynamics by optimizing
 # the knot points for a cubic spline interpolated force trajectory to minimize the
@@ -12,7 +12,7 @@ from src import Plotter
 #
 # defining the number of knot points.
 
-nodes = 4
+nodes = 6
 naxis = 3
 xaxis = 0
 yaxis = 1
@@ -27,11 +27,11 @@ x0 = np.array([[0.0], [0.0], [0.75]])  # m
 v0 = np.array([[0.0], [0.0], [0.0]])  # m/s
 # final states [xf vf]  typically want to impose xf as a bound rather than a value
 # vf is the critical parameter that must be achieved
-hDes = 0.15  # m
+hDes = 0.0  # m
 g = np.array([[0.0], [0.0], [-9.81]])  # m/s^2
 mass = 18  # kg
 # xf = 1.0
-vf = np.array([[0.0], [0.2], [np.sqrt(-2.0 * g[zaxis] * hDes)]])  # m/s
+vf = np.array([[0.0], [0.0], [np.sqrt(-2.0 * g[zaxis] * hDes)]])  # m/s
 # Jump timing
 tLaunch = 1.0
 deltaT = tLaunch / nodes  # s
@@ -39,15 +39,15 @@ deltaT = tLaunch / nodes  # s
 mu = 0.6
 fmin = mass * g * 0
 fmax = -mass * g * 2.0  # assuming robot can lift 2 times its weight
-mmin = np.array([[-2.0], [-2.0], [-2.0]])
-mmax = np.array([[2.0], [2.0], [2.0]])
+mmin = np.array([[-0.5], [-0.5], [-2.0]])
+mmax = np.array([[0.5], [0.5], [2.0]])
 xmax = np.array([[0.1], [0.1], [0.8]])
 xmin = np.array([[-0.1], [-0.1], [0.5]])
 
 xdes = np.zeros((naxis * (nodes - 1), 1))
-amp = np.array([[0.0],[0.0],[0.0]])
+amp = np.array([[0.0],[0.05],[0.0]])
 for i in range(nodes - 1):
-    xdes[naxis * i: naxis * (i + 1)] = x0 # - amp * np.sin(np.pi * i / (nodes - 2))
+    xdes[naxis * i: naxis * (i + 1)] = x0 + amp * np.sin(5 * np.pi * (i + 1) * deltaT / tLaunch)
     pass
 
 f0 = - mass * g
@@ -160,43 +160,36 @@ Ain = np.vstack((AinForce, AinFriction, AinPositionMax, AinPositionMin))
 Bin = np.vstack((binForce, binFriction, binPositionMax, binPositionMin))
 
 ## Setup the objective function
-tasks = 0
-
 # Add the entire x trajectory to the objective
-J = pi[naxis * 1:, :]
-c = xdes
+Jpdes = pi[naxis * 1:, :]
+cpdes = xdes
 for i in range(1, nodes):
-    c[naxis * (i - 1): naxis * i, :] -= x0 + delx0 + i * deltaT * v0 + (i - 1) * deltaT * delv0 + (i * i) * delxg
-c[naxis * (nodes - 2): naxis * (nodes - 1), :] -= delxf
-tasks += naxis * (nodes - 1)
+    cpdes[naxis * (i - 1): naxis * i, :] -= x0 + delx0 + i * deltaT * v0 + (i - 1) * deltaT * delv0 + (i * i) * delxg
+cpdes[naxis * (nodes - 2): naxis * (nodes - 1), :] -= delxf
+Wpdes = np.identity(naxis * (nodes - 1))
+Qpdes, fpdes = HelperFuncs.getQuadProgCostFunction(Jpdes, cpdes, Wpdes)
 
 # Adding the final v value to the objective
 Jvf = vi[(nodes - 1) * naxis: nodes * naxis, :]
 cvf = vf - v0 - delv0 - delvf - (nodes - 1) * delvg
-tasks += naxis
+Wvf = np.identity(naxis)
+Qvf, fvf = HelperFuncs.getQuadProgCostFunction(Jvf, cvf, Wvf)
 
 # Normalize the forces so that they are reduced as much as possible
 Jforce = np.identity(naxis * 2 * (nodes - 2))
 cforce = np.zeros((naxis * 2 * (nodes - 2), 1))
-tasks += naxis * 2 * (nodes - 2)
-
-J = np.vstack((J, Jvf, Jforce))
-c = np.vstack((c, cvf, cforce))
-
-W = np.identity(tasks)
+Wforce = np.identity(naxis * 2 * (nodes - 2))
 for k in range(naxis):
     for i in range(nodes - 2):
-        W[nodes*naxis + 2 * i * naxis + k] *= 1 / 10000000000000
-        W[nodes*naxis + (2 * i + 1) * naxis + k] *= 1 / 100
+        Wforce[2 * i * naxis + k, 2 * i * naxis + k] *= 0 / 1000000
+        Wforce[(2 * i  + 1) * naxis + k, (2 * i  + 1)* naxis + k] *= 1 / 10
         pass
     pass
+Qforce, fforce = HelperFuncs.getQuadProgCostFunction(Jforce, cforce, Wforce)
 
-Jt = J.transpose()
-JtW = Jt.dot(W)
-Q = JtW.dot(J)
-f = -JtW.dot(c)
+Q = Qpdes + Qvf + Qforce
+f = fpdes + fvf + fforce
 
-w, v = np.linalg.eig(Q)
 P = matrix(Q, tc='d')
 q = matrix(f, tc='d')
 G = matrix(Ain, tc='d')
