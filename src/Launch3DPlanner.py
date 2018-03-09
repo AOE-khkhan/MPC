@@ -209,26 +209,7 @@ for i in range(1, nodes - 1):
 fVals[(nodes - 1) * naxis: nodes * naxis, :] = ff + mass * g
 mVals[(nodes - 1) * naxis: nodes * naxis, :] = mf
 
-fxVals = np.zeros((nodes, 1))
-fyVals = np.zeros((nodes, 1))
-fzVals = np.zeros((nodes, 1))
-mxVals = np.zeros((nodes, 1))
-myVals = np.zeros((nodes, 1))
-mzVals = np.zeros((nodes, 1))
-
-for i in range(nodes):
-    fxVals[i, 0] = fVals[naxis * i + xaxis]
-    fyVals[i, 0] = fVals[naxis * i + yaxis]
-    fzVals[i, 0] = fVals[naxis * i + zaxis]
-
-    mxVals[i, 0] = mVals[naxis * i + xaxis]
-    myVals[i, 0] = mVals[naxis * i + yaxis]
-    mzVals[i, 0] = mVals[naxis * i + zaxis]
-    pass
-
-Plotter.plotResults(fxVals, mxVals, nodes, mass, deltaT, x0[xaxis], v0[xaxis])
-Plotter.plotResults(fyVals, myVals, nodes, mass, deltaT, x0[yaxis], v0[yaxis])
-Plotter.plotResults(fzVals, mzVals, nodes, mass, deltaT, x0[zaxis], v0[zaxis])
+Plotter.plotResults3D(fVals, mVals, nodes, mass,deltaT, x0, v0, g)
 
 # vOpt = vi.dot(fOpt)
 # for i in range(nodes):
