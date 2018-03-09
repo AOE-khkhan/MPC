@@ -12,7 +12,7 @@ from src import Plotter
 #
 # defining the number of knot points.
 
-nodes = 4
+nodes = 6
 naxis = 3
 xaxis = 0
 yaxis = 1
@@ -27,27 +27,27 @@ x0 = np.array([[0.0], [0.0], [0.75]])  # m
 v0 = np.array([[0.0], [0.0], [0.0]])  # m/s
 # final states [xf vf]  typically want to impose xf as a bound rather than a value
 # vf is the critical parameter that must be achieved
-hDes = 0.0  # m
+hDes = 0.15  # m
 g = np.array([[0.0], [0.0], [-9.81]])  # m/s^2
 mass = 18  # kg
 # xf = 1.0
-vf = np.array([[0.0], [0.0], [np.sqrt(-2.0 * g[zaxis] * hDes)]])  # m/s
+vf = np.array([[1.0], [0.0], [np.sqrt(-2.0 * g[zaxis] * hDes)]])  # m/s
 # Jump timing
 tLaunch = 1.0
 deltaT = tLaunch / nodes  # s
 
 mu = 0.6
 fmin = mass * g * 0
-fmax = -mass * g * 1.5  # assuming robot can lift 2 times its weight
+fmax = -mass * g * 2.0  # assuming robot can lift 2 times its weight
 mmin = np.array([[-2.0], [-2.0], [-2.0]])
 mmax = np.array([[2.0], [2.0], [2.0]])
 xmax = np.array([[0.1], [0.05], [0.8]])
 xmin = np.array([[-0.1], [-0.05], [0.5]])
 
 xdes = np.zeros((naxis * (nodes - 1), 1))
-amp = np.array([[0.0],[1.0],[0.15]])
+amp = np.array([[0.0],[0.0],[0.0]])
 for i in range(nodes - 1):
-    xdes[naxis * i: naxis * (i + 1)] = x0 - amp * np.sin(np.pi * i / (nodes - 2))
+    xdes[naxis * i: naxis * (i + 1)] = x0 # - amp * np.sin(np.pi * i / (nodes - 2))
     pass
 
 f0 = - mass * g
@@ -184,7 +184,7 @@ J = np.vstack((J, Jvf, Jforce))
 c = np.vstack((c, cvf, cforce))
 
 W = np.identity(tasks)
-W[naxis * nodes:, naxis * nodes:] *= 1 / (10000 ** 2)
+W[naxis * nodes:, naxis * nodes:] *= 0 / (10000000 ** 2)
 Jt = J.transpose()
 JtW = Jt.dot(W)
 Q = JtW.dot(J)

@@ -179,8 +179,8 @@ vOpt[nodes - 1, 0] += delvf
 xOpt = xi.dot(fOpt)
 xOpt[0, 0] += x0
 for i in range(1, nodes):
-    xOpt[i] += x0 + delx0 +  i * deltaT * v0 + (i-1) * deltaT * delv0
-xOpt[nodes -1, 0] += delxf
+    xOpt[i] += x0 + delx0 + i * deltaT * v0 + (i-1) * deltaT * delv0
+xOpt[nodes -1, 0] -= delxf
 print("Force profile:")
 print(fOpt)
 print("Position profile:")
