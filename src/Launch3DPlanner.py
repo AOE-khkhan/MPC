@@ -12,7 +12,7 @@ from src import Plotter
 #
 # defining the number of knot points.
 
-nodes = 6
+nodes = 4
 naxis = 3
 xaxis = 0
 yaxis = 1
@@ -31,7 +31,7 @@ hDes = 0.15  # m
 g = np.array([[0.0], [0.0], [-9.81]])  # m/s^2
 mass = 18  # kg
 # xf = 1.0
-vf = np.array([[1.0], [0.0], [np.sqrt(-2.0 * g[zaxis] * hDes)]])  # m/s
+vf = np.array([[0.0], [0.2], [np.sqrt(-2.0 * g[zaxis] * hDes)]])  # m/s
 # Jump timing
 tLaunch = 1.0
 deltaT = tLaunch / nodes  # s
@@ -41,8 +41,8 @@ fmin = mass * g * 0
 fmax = -mass * g * 2.0  # assuming robot can lift 2 times its weight
 mmin = np.array([[-2.0], [-2.0], [-2.0]])
 mmax = np.array([[2.0], [2.0], [2.0]])
-xmax = np.array([[0.1], [0.05], [0.8]])
-xmin = np.array([[-0.1], [-0.05], [0.5]])
+xmax = np.array([[0.1], [0.1], [0.8]])
+xmin = np.array([[-0.1], [-0.1], [0.5]])
 
 xdes = np.zeros((naxis * (nodes - 1), 1))
 amp = np.array([[0.0],[0.0],[0.0]])
@@ -135,8 +135,8 @@ AinFriction = np.zeros((4 * (nodes - 2), naxis * 2 * (nodes - 2)))
 binFriction = np.zeros((4 * (nodes - 2), 1))
 for i in range(nodes - 2):
     for k in range(4):
-        AinFriction[4 * i + k, naxis * 2 * i + xaxis] = np.power(-1, k)
-        AinFriction[4 * i + k, naxis * 2 * i + yaxis] = np.power(-1, int(k / 2))
+        AinFriction[4 * i + k, naxis * 2 * i + xaxis] = np.power(-1, int(k / 2))
+        AinFriction[4 * i + k, naxis * 2 * i + yaxis] = np.power(-1, k)
         AinFriction[4 * i + k, naxis * 2 * i + zaxis] = -mu
         pass
     pass
@@ -184,7 +184,13 @@ J = np.vstack((J, Jvf, Jforce))
 c = np.vstack((c, cvf, cforce))
 
 W = np.identity(tasks)
-W[naxis * nodes:, naxis * nodes:] *= 0 / (10000000 ** 2)
+for k in range(naxis):
+    for i in range(nodes - 2):
+        W[nodes*naxis + 2 * i * naxis + k] *= 1 / 10000000000000
+        W[nodes*naxis + (2 * i + 1) * naxis + k] *= 1 / 100
+        pass
+    pass
+
 Jt = J.transpose()
 JtW = Jt.dot(W)
 Q = JtW.dot(J)
@@ -198,7 +204,6 @@ h = matrix(Bin, tc='d')
 
 soln = solvers.qp(P, q, G, h)
 fOpt = soln['x']
-
 fVals = np.zeros((naxis * nodes, 1))
 mVals = np.zeros((naxis * nodes, 1))
 fVals[0: naxis, :] = f0 + mass * g
