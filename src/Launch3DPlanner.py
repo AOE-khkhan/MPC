@@ -39,15 +39,15 @@ deltaT = tLaunch / nodes  # s
 mu = 0.6
 fmin = mass * g * 0
 fmax = -mass * g * 2.0  # assuming robot can lift 2 times its weight
-mmin = np.array([[-0.5], [-0.5], [-2.0]])
-mmax = np.array([[0.5], [0.5], [2.0]])
+mmin = np.array([[-0.5], [-0.5], [-2.0]]) * deltaT
+mmax = np.array([[0.5], [0.5], [2.0]]) * deltaT
 xmax = np.array([[0.1], [0.1], [0.8]])
 xmin = np.array([[-0.1], [-0.1], [0.5]])
 
 xdes = np.zeros((naxis * (nodes - 1), 1))
 amp = np.array([[0.0],[0.05],[0.0]])
 for i in range(nodes - 1):
-    xdes[naxis * i: naxis * (i + 1)] = x0 + amp * np.sin(5 * np.pi * (i + 1) * deltaT / tLaunch)
+    xdes[naxis * i: naxis * (i + 1)] = x0 + amp * np.sin(2 * np.pi * (i + 1) * deltaT / tLaunch)
     pass
 
 f0 = - mass * g
@@ -172,7 +172,7 @@ Qpdes, fpdes = HelperFuncs.getQuadProgCostFunction(Jpdes, cpdes, Wpdes)
 # Adding the final v value to the objective
 Jvf = vi[(nodes - 1) * naxis: nodes * naxis, :]
 cvf = vf - v0 - delv0 - delvf - (nodes - 1) * delvg
-Wvf = np.identity(naxis)
+Wvf = np.identity(naxis) * 0
 Qvf, fvf = HelperFuncs.getQuadProgCostFunction(Jvf, cvf, Wvf)
 
 # Normalize the forces so that they are reduced as much as possible
@@ -182,7 +182,7 @@ Wforce = np.identity(naxis * 2 * (nodes - 2))
 for k in range(naxis):
     for i in range(nodes - 2):
         Wforce[2 * i * naxis + k, 2 * i * naxis + k] *= 0 / 1000000
-        Wforce[(2 * i  + 1) * naxis + k, (2 * i  + 1)* naxis + k] *= 1 / 10
+        Wforce[(2 * i  + 1) * naxis + k, (2 * i  + 1)* naxis + k] *= 1 / (10 * deltaT * deltaT)
         pass
     pass
 Qforce, fforce = HelperFuncs.getQuadProgCostFunction(Jforce, cforce, Wforce)
