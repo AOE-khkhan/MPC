@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.linalg import logm, expm
 
 # Converts the objective Jq = c with weight W into a quadratic cost
 # Q = Jt * W * J, f = -Jt * c  Jt is J transpose
@@ -22,10 +23,17 @@ def skew(A):
     skewA[2, 1] = A[0, 0]
     return skewA
 
+def askew(A):
+    return np.array([[-A.item(1, 2)], [A.item(0, 2)], [-A.item(0, 1)]])
+
+
 def getMomentumAboutCoM(x, cop, F):
     r = cop - x
     return np.array([[r[1, 0] * F[2, 0] - r[2, 0] * F[1, 0]], [r[2, 0] * F[0, 0] - r[0, 0] * F[2, 0]], [r[0, 0] * F[1, 0] - r[1, 0] * F[0, 0]]])
 
 def getLogDiff(R1, R2):
     R2inv = np.linalg.inv(R2)
-    return np.matmul(R1, R2inv)
+    return askew(logm(np.matmul(R1, R2inv)))
+
+def getRotationMatrix(w, deltaT):
+    return expm(skew(w)*deltaT)
