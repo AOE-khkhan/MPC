@@ -1,9 +1,8 @@
 import numpy as np
 from cvxopt import solvers
 from cvxopt import matrix
-from numpy.matlib import zeros
 
-from src import Plotter, HelperFuncs
+from src.Planner import Plotter, HelperFuncs
 
 # This code generates a trajectory for linear centroidal dynamics by optimizing
 # the knot points for a cubic spline interpolated force trajectory to minimize the
@@ -12,7 +11,7 @@ from src import Plotter, HelperFuncs
 #
 # defining the number of knot points.
 
-nodes = 6
+nodes = 10
 naxis = 3
 xaxis = 0
 yaxis = 1
@@ -27,32 +26,33 @@ x0 = np.array([[0.0], [0.0], [0.75]])  # m
 v0 = np.array([[0.0], [0.0], [0.0]])  # m/s
 # final states [xf vf]  typically want to impose xf as a bound rather than a value
 # vf is the critical parameter that must be achieved
-hDes = 0.0  # m
+hDes = 0.15  # m
 g = np.array([[0.0], [0.0], [-9.81]])  # m/s^2
 mass = 18  # kg
 # xf = 1.0
-vf = np.array([[0.0], [0.0], [np.sqrt(-2.0 * g[zaxis] * hDes)]])  # m/s
+vf = np.array([[0.5], [0.0], [np.sqrt(-2.0 * g[zaxis] * hDes)]])  # m/s
+print(vf)
 # Jump timing
-tLaunch = 1.0
+tLaunch = 0.6
 deltaT = tLaunch / nodes  # s
 
 mu = 0.6
 fmin = mass * g * 0
-fmax = -mass * g * 2.0  # assuming robot can lift 2 times its weight
-mmin = np.array([[-0.5], [-0.5], [-2.0]]) * deltaT
-mmax = np.array([[0.5], [0.5], [2.0]]) * deltaT
+fmax = -mass * g * 2.0 * (1 + mu)# assuming robot can lift 2 times its weight
+mmin = np.array([[-0.5], [-0.5], [-5.0]]) * deltaT
+mmax = np.array([[0.5], [0.5], [5.0]]) * deltaT
 xmax = np.array([[0.1], [0.1], [0.8]])
 xmin = np.array([[-0.1], [-0.1], [0.5]])
 
 xdes = np.zeros((naxis * (nodes - 1), 1))
-amp = np.array([[0.0],[0.05],[0.0]])
+amp = np.array([[0.0],[0.0],[0.05]])
 for i in range(nodes - 1):
-    xdes[naxis * i: naxis * (i + 1)] = x0 + amp * np.sin(2 * np.pi * (i + 1) * deltaT / tLaunch)
+    xdes[naxis * i: naxis * (i + 1)] = x0 + amp #* np.sin(2 * np.pi * (i + 1) * deltaT / tLaunch)
     pass
 
 f0 = - mass * g
 m0 = np.array([[0.0], [0.0], [0.0]])
-ff = - mass * g
+ff = - mass * g * 0
 mf = np.array([[0.0], [0.0], [0.0]])
 
 # Calculate the unknown state variables in terms of the decision variables. These are the transformation matrices
@@ -166,13 +166,13 @@ cpdes = xdes
 for i in range(1, nodes):
     cpdes[naxis * (i - 1): naxis * i, :] -= x0 + delx0 + i * deltaT * v0 + (i - 1) * deltaT * delv0 + (i * i) * delxg
 cpdes[naxis * (nodes - 2): naxis * (nodes - 1), :] -= delxf
-Wpdes = np.identity(naxis * (nodes - 1))
+Wpdes = np.identity(naxis * (nodes - 1)) * 0.0
 Qpdes, fpdes = HelperFuncs.getQuadProgCostFunction(Jpdes, cpdes, Wpdes)
 
 # Adding the final v value to the objective
 Jvf = vi[(nodes - 1) * naxis: nodes * naxis, :]
 cvf = vf - v0 - delv0 - delvf - (nodes - 1) * delvg
-Wvf = np.identity(naxis) * 0
+Wvf = np.identity(naxis) * 1000
 Qvf, fvf = HelperFuncs.getQuadProgCostFunction(Jvf, cvf, Wvf)
 
 # Normalize the forces so that they are reduced as much as possible
@@ -181,8 +181,11 @@ cforce = np.zeros((naxis * 2 * (nodes - 2), 1))
 Wforce = np.identity(naxis * 2 * (nodes - 2))
 for k in range(naxis):
     for i in range(nodes - 2):
-        Wforce[2 * i * naxis + k, 2 * i * naxis + k] *= 0 / 1000000
-        Wforce[(2 * i  + 1) * naxis + k, (2 * i  + 1)* naxis + k] *= 1 / (10 * deltaT * deltaT)
+        if( k != zaxis):
+            Wforce[2 * i * naxis + k, 2 * i * naxis + k] *= 1 / 1000
+        else:
+            Wforce[2 * i * naxis + k, 2 * i * naxis + k] *= 1 / 10000000
+        Wforce[(2 * i  + 1) * naxis + k, (2 * i  + 1)* naxis + k] *= 1 / (1000 * deltaT * deltaT)
         pass
     pass
 Qforce, fforce = HelperFuncs.getQuadProgCostFunction(Jforce, cforce, Wforce)
@@ -207,7 +210,7 @@ for i in range(1, nodes - 1):
 fVals[(nodes - 1) * naxis: nodes * naxis, :] = ff + mass * g
 mVals[(nodes - 1) * naxis: nodes * naxis, :] = mf
 
-Plotter.plotResults3D(fVals, mVals, nodes, mass,deltaT, x0, v0, g)
+Plotter.plotResults3D(fVals, mVals, nodes, mass, deltaT, x0, v0, g)
 
 # vOpt = vi.dot(fOpt)
 # for i in range(nodes):

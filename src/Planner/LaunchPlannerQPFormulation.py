@@ -1,9 +1,8 @@
 import numpy as np
 from cvxopt import solvers
 from cvxopt import matrix
-from pip.cmdoptions import no_binary
 
-from src import Plotter
+from src.Planner import Plotter
 
 # This code generates a trajectory for linear centroidal dynamics by optimizing
 # the knot points for a cubic spline interpolated force trajectory to minimize the
@@ -12,7 +11,7 @@ from src import Plotter
 #
 # defining the number of knot points.
 
-nodes = 15
+nodes = 3
 # decision variables [f1, m1, .... f(nodes - 2), m(nodes - 2)]
 # fi = force value mi = derivative of force
 # The first and last knot points are considered fixed and removed from the optimization
@@ -24,10 +23,10 @@ v0 = 0.0  # m/s
 # vf is the critical parameter that must be achieved
 hDes = 0.0  # m
 g = -9.81  # m/s^2
-mass = 18  # kg
+mass = 1/12  # kg
 xf = 1.0
 vf = np.sqrt(-2.0 * g * hDes)  # m/s
-deltaT = 1.0 / nodes  # s
+deltaT = 0.1 #1.0 / nodes  # s
 
 fmin = mass * g
 fmax = mass * g - mass * g * 1.5  # assuming robot can lift 2 times its weight
@@ -69,6 +68,7 @@ vi[nodes - 2 + 1, 2 * (nodes - 2) - 1] = 1 * veloMultiplier
 for i in range(1, nodes):
     vi[i, :] = vi[i, :] + vi[i - 1, :]
     pass
+print(vi)
 
 posMultiplier = deltaT ** 2 / (60 * mass)
 delx0 = (21 * f0 + 3 * m0) * posMultiplier
