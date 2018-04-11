@@ -1,12 +1,13 @@
 from builtins import print
+from idlelib import run
+
 from cvxopt import matrix, log, exp, solvers
 from matplotlib import pyplot as plt
 from src.Planner.HelperFuncs import *
 import numpy as np
-solvers.options['show_progress'] = False
+solvers.options['show_progress'] = True
 
-nodes = 10
-deltaT = 0.01
+deltaT = 0.005
 T = 2.0
 gz = -9.81
 
@@ -49,9 +50,14 @@ Jf = np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 fDes = [np.copy(f0) for i in range(nQP)]
 fC = [False for i in range(nQP)]
 count = int(0.4 / deltaT)
-start = int(0.7 / deltaT)
+start = int(0.8 / deltaT)
+fDes[0][2] = 0.0
+f[0][2] = 0.0
+fC[0] = True
+
 for i in range(count):
     fDes[i + start][2] = mass * gz
+    f[i + start][2] = mass * gz
     fC[i + start] = True
     pass
 
@@ -74,8 +80,8 @@ delv = vf - v[nQP - 1]
 delw = wf - w[nQP - 1]
 delR = getLogDiff(Rf, R[nQP - 1])
 
-Wx = np.identity(3) * 1000
-Wv = np.identity(3) * 1000
+Wx = np.identity(3) * 10
+Wv = np.identity(3) * 20
 WR = np.identity(3) * 1
 Ww = np.identity(3) * 1
 
@@ -91,8 +97,9 @@ Ainf = np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.
                  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
-nIterations = 2
+nIterations = 10
 fHist = [[np.zeros((3,1)) for j in range(nQP)] for i in range(nIterations)]
+runIterations = 0
 for j in range(nIterations):
     # Backward pass
     delx = xf - r[nQP - 1]
@@ -100,16 +107,20 @@ for j in range(nIterations):
     try:
         for i in range(nQP - 1):
             im = nQP - i - 1
+            print(im)
             errx = r[im] - r[im - 1] - deltaT * v[im - 1]
             errv = v[im] - v[im - 1] - deltaT / mass * f[im - 1]
             M = getMomentumAboutCoM(r[im - 1], cop[im - 1], f[im - 1])
             errw = w[im] - w[im - 1] - deltaT * np.matmul(Iinv, M - getAngularMomentumInstability(w[im - 1], I))
             errR = getLogDiff(R[im], R[im - 1]) - w[im - 1] * deltaT
-            objx = 0.75 * (delx + errx)
-            objv = 0.75 * (delv + errv)
+            objx = (delx + errx)
+            objv = (delv + errv)
             objw = delw + errw
             objR = delR + errR
-            objf = f[im] - f[im - 1]
+            if(im > 1):
+                objf = 0.5 * (f[im] + f[im - 2]) - f[im - 1]
+            else:
+                objf = f[im] - f[im - 1]
             Ixx = I.item((0, 0))
             Iyy = I.item((1, 1))
             Izz = I.item((2, 2))
@@ -128,14 +139,16 @@ for j in range(nIterations):
             Jw[0, :] *= 1.0/Ixx
             Jw[1, :] *= 1.0/Iyy
             Jw[2, :] *= 1.0/Izz
-            Q = np.identity(18) * 0.001
+            Q = np.identity(18) * 0.01
             F = np.zeros((18, 1))
             if(fC[im - 1]):
                 Aeqf = Jf
                 Beqf = fDes[im - 1] - f[im - 1]
-                Wf = np.identity(3) * 2
+                Wf = np.identity(3) * 0
+                Wx = np.identity(3) * 0
             else:
-                Wf = np.identity(3) * 2
+                Wf = np.identity(3) * 0.0001
+                Wx = np.identity(3) * 20
                 Aeqf = []
                 Beqf = []
             Qd, fd = getQuadProgCostFunction(Jf, objf, Wf)
@@ -171,13 +184,16 @@ for j in range(nIterations):
 
             dOpt = soln['x']
             delx = np.array(dOpt[0:3])
+            print(delx)
             delv = np.array(dOpt[3:6])
+            print(delv)
             delf = np.array(dOpt[6:9])
             delR = np.array(dOpt[9:12])
             delw = np.array(dOpt[12:15])
             delCoP = np.array(dOpt[15:18])
             f[im - 1] += delf
             cop[im - 1] += delCoP
+            print("*******")
             pass
     except Exception as e:
         print("Qp broke after " + str(j) + " iterations. ")
@@ -203,6 +219,7 @@ for j in range(nIterations):
         fHist[j][k][1] = f[k].item(1)
         fHist[j][k][2] = f[k].item(2)
     pass
+    runIterations = runIterations + 1
 pass
 
 tData = [deltaT * i for i in range(nQP)]
@@ -272,7 +289,10 @@ fig.show()
 fig = plt.figure()
 conPlot = fig.add_subplot(111)
 n = [i for i in range(nQP)]
-for i in range(nIterations):
+skipCount = runIterations / 20
+for i in range(runIterations):
+    if(not(i % skipCount == 0) and not(i == runIterations - 1)):
+        continue
     fz = [fHist[i][j].item(2) for j in range(nQP)]
     conPlot.plot(n, fz, label="iter" + str(i))
 pass
