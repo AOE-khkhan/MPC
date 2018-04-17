@@ -33,14 +33,14 @@ mdx = 3  # number of trajectory derivatives to match
 mdv = 1  # number of CoP derivatives to match
 mdu = 1  # number of scalar derivatives to match
 
-nodes = 5  # number of nodes into which the system is divided
+nodes = 6  # number of nodes into which the system is divided
 # D = [... nxi nzi nvi nui ...]
 deltaT = T / (nodes - 1)
 
 # Setup nominal trajectory
 dx = (xf - xi) / (nodes - 1)
 D = np.zeros(((nodes - 1) * (2 * nx + nv + nu)))
-u0 = 2  # FIXME
+u0 = 3  # FIXME
 nodeT = [i * deltaT for i in range(nodes)]
 for i in range(nodes - 1):
     t = nodeT[i]
@@ -140,7 +140,7 @@ for i in range(nIterations):
             for l in range(nx - 2):
                 dynJ[j * 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + k * nx + l + 2] = (l + 1) * (l + 2)
                 dynC[j * 2 * (nx + nu) + k * (nx + nu) + l, 0] = -D[j * nNode + k * nx + l + 2] * (l + 1) * (l + 2)
-                nConv = max(0, l - nu)
+                nConv = max(0, l - nu + 1)
                 for m in range(nConv, l + 1):
                     n = l - m
                     dynJ[j * 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + k * nx + m] = -D[j * nNode + 2 * nx + nv + n]
@@ -148,10 +148,9 @@ for i in range(nIterations):
                     dynJ[j + 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m] + D[j * nNode + 2 * nx + m]
                     dynC[j * 2 * (nx + nu) + k * (nx + nu) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (D[j * nNode + k * nx + m] - D[j * nNode + 2 * nx + m])
                     pass
+                pass
             pass
         pass
-    print(dynJ)
-    print(dynC)
 
     ## Setup scalar multiplier constraints
 
