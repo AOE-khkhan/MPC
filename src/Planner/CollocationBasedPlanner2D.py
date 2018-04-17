@@ -53,15 +53,38 @@ for i in range(nodes):
     pass
 
 nIterations = 1
+nNode = (2 * nx + nv + nu)
 
 for i in range(nIterations):
-    # Setup end point constraints
-    
-    # Setup scalar multiplier constraints
+    ## Setup end point constraints
+    endJ = np.zeros((12, nodes * nNode))
+    endC = np.zeros((12, 1))
+    # Setup initial point constraints
+    for j in range(2):
+        endJ[3 * j + 0, j * nx + 0] = 1.0
+        endJ[3 * j + 1, j * nx + 1] = 1.0
+        endJ[3 * j + 2, j * nx + 2] = 2.0
+        endC[3 * j + 0, 1] = xi[j] - D[0 + j * nx]
+        endC[3 * j + 1, 1] = vi[j] - D[0 + j * nx + 1]
+        endC[3 * j + 2, 1] = ai[j] - 2.0 * D[0 + j * nx + 2]
+        pass
+    # Setup final point constraints
+    for j in range(2):
+        endJ[6 + 3 * j + 0, (nodes - 1) * nNode + j * nx + 0] = 1.0
+        endJ[6 + 3 * j + 1, (nodes - 1) * nNode + j * nx + 1] = 1.0
+        endJ[6 + 3 * j + 2, (nodes - 1) * nNode + j * nx + 2] = 2.0
+        endC[6 + 3 * j + 0, 1] = xf[j] - D[(nodes - 1) * nNode + j * nx]
+        endC[6 + 3 * j + 1, 1] = vf[j] - D[(nodes - 1) * nNode + j * nx + 1]
+        endC[6 + 3 * j + 2, 1] = af[j] - 2.0 * D[(nodes - 1) * nNode +  j * nx + 2]
+        pass
 
-    # Setup equality dynamic constraints
+    ## Setup collocation constraints
 
-    # Setup cop location constraints
+    ## Setup equality differential dynamic constraints
+
+    ## Setup scalar multiplier constraints
+
+    ## Setup cop location constraints
 
     for i in range(nodes):
         pass
