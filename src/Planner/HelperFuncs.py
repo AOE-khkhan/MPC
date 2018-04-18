@@ -37,3 +37,19 @@ def getLogDiff(R1, R2):
 
 def getRotationMatrix(w, deltaT):
     return expm(skew(w)*deltaT)
+
+def removeNullConstraints(J, c, threshold):
+    rows = J.shape[0]
+    cols = J.shape[1]
+    rowRemovalList = []
+    for i in range(rows):
+        remove = True
+        for j in range(cols):
+            remove = remove and (abs(J.item(i,j)) < threshold)
+        if(remove):
+            if abs(c.item(i, 0)) > threshold:
+                print("Removing constraint with zero coefficient and non zero objective")
+            rowRemovalList.append(i)
+    print("Removing " + str(len(rowRemovalList)) + " constraints")
+    return np.delete(J, rowRemovalList, axis=0), np.delete(c, rowRemovalList, axis=0)
+

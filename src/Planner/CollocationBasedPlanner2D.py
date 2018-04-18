@@ -16,10 +16,10 @@ T = 1.0
 tFlight = 1.4
 tLand = 1.6
 g = -9.81
-xi = np.array([-0.04, 0.35])
+xi = np.array([0.0, 0.35])
 vi = np.array([0.0, 0.0])
 ai = np.array([0.0, 0.0])
-xf = np.array([0.04, 0.39])
+xf = np.array([0.0, 0.39])
 vf = np.array([0.0, 0.0])
 af = np.array([0.0, 0.0])
 
@@ -35,15 +35,15 @@ vUbi = xi[0] + dF
 vLbf = xf[0] - dF
 vUbf = xf[0] + dF
 
-nv = 4  # number of coefficients for CoP trajectory
+nv = 6  # number of coefficients for CoP trajectory
 nx = nv  # number of coefficients for CoM trajectory
-nu = 3  # number of coefficients for parameter trajectory
-mdx = 2  # number of trajectory derivatives to match
-mdv = 2  # number of CoP derivatives to match
+nu = 4  # number of coefficients for parameter trajectory
+mdx = 1  # number of trajectory derivatives to match
+mdv = 1  # number of CoP derivatives to match
 mdu = 2  # number of scalar derivatives to match
 ncv = nv # number of support polygon constraints segment
 
-nodes = 6  # number of nodes into which the system is divided
+nodes = 3  # number of nodes into which the system is divided
 # D = [... nxi nzi nvi nui ...]
 deltaT = T / (nodes - 1)
 
@@ -64,7 +64,6 @@ for i in range(nodes - 1):
     else:
         D[i * (2 * nx + nv + nu) + 2 * nx] = 0.5 * (xf[0] + xi[0])
     D[i * (2 * nx + nv + nu) + 2 * nx + nv] = nui
-    pass
 
 nIterations = 10
 nNode = (2 * nx + nv + nu)
@@ -82,7 +81,7 @@ for i in range(nIterations):
         endC[3 * j + 0, 0] = xi[j] - D[0 + j * nx]
         endC[3 * j + 1, 0] = vi[j] - D[0 + j * nx + 1]
         endC[3 * j + 2, 0] = ai[j] - 2.0 * D[0 + j * nx + 2]
-        pass
+
     # Setup final trajectory constraints
     for j in range(2):
         endC[6 + 3 * j + 0, 0] = xf[j]
@@ -95,8 +94,6 @@ for i in range(nIterations):
             endC[6 + 3 * j + 0, 0] -= D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
             endC[6 + 3 * j + 1, 0] -= k * D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
             endC[6 + 3 * j + 2, 0] -= k * (k - 1) * D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
-            pass
-        pass
 
     # Setup initial CoP constraints
     endJv = np.zeros((2, (nodes - 1) * nNode))
@@ -109,7 +106,6 @@ for i in range(nIterations):
     for k in range(nv):
         endJv[1, (nodes - 2) * nNode + 2 * nx + k] = deltaT ** k
         endCv[1, 0] -= D[(nodes - 2) * nNode + 2 * nx + k] * deltaT ** k
-        pass
 
     # Setup initial scalar constraints
     endJu = np.zeros((2, (nodes - 1) * nNode))
@@ -122,7 +118,6 @@ for i in range(nIterations):
     for k in range(nu):
         endJu[1, (nodes - 2) * nNode + 2 * nx + nv + k] = deltaT ** k
         endCu[1, 0] -= D[(nodes - 2) * nNode + 2 * nx + nv + k] * deltaT ** k
-        pass
 
     ## Setup collocation constraints
     # Trajectory collocation
@@ -138,9 +133,6 @@ for i in range(nIterations):
                     collJx[j * (2 * mdx) + k * mdx + l, (j + 1) * nNode + k * nx + m] = -fact * (0 ** (m - l)) * 1.0
                     collCx[j * (2 * mdx) + k * mdx + l, 0] += -fact * (deltaT ** (m - l)) * D[j * nNode + k * nx + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + k * nx + m]
                     fact = fact * (m - l)
-                pass
-            pass
-        pass
 
     # CoP collocation
     collJv = np.zeros(((nodes - 2) * mdv, (nodes - 1) * nNode))
@@ -154,8 +146,6 @@ for i in range(nIterations):
                 collJv[j * mdv + l, (j + 1) * nNode + 2 * nx + m] = -fact * (0 ** (m - l)) * 1.0
                 collCv[j * mdv + l, 0] += -fact * (deltaT ** (m - l)) * D[j * nNode + 2 * nx + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + 2 * nx + m]
                 fact = fact * (m - l)
-            pass
-        pass
 
     # Scalar multiplier collocation
     collJu = np.zeros(((nodes - 2) * mdu, (nodes - 1) * nNode))
@@ -169,8 +159,6 @@ for i in range(nIterations):
                 collJu[j * mdu + l, (j + 1) * nNode + 2 * nx + nv + m] = -fact * (0 ** (m - l)) * 1.0
                 collCu[j * mdu + l, 0] += -fact * (deltaT ** (m - l)) * D[j * nNode + 2 * nx + nv + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + 2 * nx + nv + m]
                 fact = fact * (m - l)
-            pass
-        pass
 
     ## Setup equality differential dynamic constraints
     nxdd = nx + nu - 1
@@ -178,49 +166,66 @@ for i in range(nIterations):
     dynC = np.zeros((2 * (nodes - 1) * (nxdd), 1))
     gvec = np.array([[0.0], [g]])
     for j in range(nodes - 1):
-        for k in range(2):
-            l = 0
+        k = 0
+        for l in range(nx - 2):
             dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + l + 2] = (l + 1) * (l + 2)
-            dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] = -D[j * nNode + k * nx + l + 2] * (l + 1) * (l + 2) + gvec[k]
+            dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] = -D[j * nNode + k * nx + l + 2] * (l + 1) * (l + 2)
             nConv = max(0, l - nu + 1)
-            for m in range(nConv, l + 1):
+            nConvEnd = min(l + 1, nx)
+            for m in range(nConv, nConvEnd):
                 n = l - m
                 dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + m] = -D[j * nNode + 2 * nx + nv + n]
                 dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + m] = D[j * nNode + 2 * nx + nv + n]
-                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m] + \
-                                                                                           D[j * nNode + 2 * nx + m]
+                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m] + D[j * nNode + 2 * nx + m]
+                dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (D[j * nNode + k * nx + m] - D[j * nNode + 2 * nx + m])
+
+        for l in range(nx - 2, nx + nu - 1):
+            nConv = max(0, l - nu + 1)
+            nConvEnd = min(l + 1, nx)
+            for m in range(nConv, nConvEnd):
+                n = l - m
+                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + m] = -D[j * nNode + 2 * nx + nv + n]
+                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + m] = D[j * nNode + 2 * nx + nv + n]
+                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m]\
+                                                                                           + D[j * nNode + 2 * nx + m]
                 dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (
                             D[j * nNode + k * nx + m] - D[j * nNode + 2 * nx + m])
-                pass
-            pass
-            for l in range(1, nx - 2):
-                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + l + 2] = (l + 1) * (l + 2)
-                dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] = -D[j * nNode + k * nx + l + 2] * (l + 1) * (l + 2)
-                nConv = max(0, l - nu + 1)
-                for m in range(nConv, l + 1):
-                    n = l - m
-                    dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + m] = -D[j * nNode + 2 * nx + nv + n]
-                    dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + m] = D[j * nNode + 2 * nx + nv + n]
-                    dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m] + D[j * nNode + 2 * nx + m]
-                    dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (D[j * nNode + k * nx + m] - D[j * nNode + 2 * nx + m])
-                    pass
-                pass
-            pass
-            for l in range(nx - 2, nx + nu - 1):
-                nConv = max(0, l - nu + 1)
-                for m in range(nConv, l + 1):
-                    n = l - m
-                    dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + m] = -D[
-                        j * nNode + 2 * nx + nv + n]
-                    dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + m] = D[j * nNode + 2 * nx + nv + n]
-                    dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m]\
-                                                                                               + D[j * nNode + 2 * nx + m]
-                    dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (
-                                D[j * nNode + k * nx + m] - D[j * nNode + 2 * nx + m])
-                    pass
-                pass
-            pass
-        pass
+
+        k = 1
+        l = 0
+        dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + l + 2] = (l + 1) * (l + 2)
+        dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] = -D[j * nNode + k * nx + l + 2] * (l + 1) * (l + 2) + g
+        nConv = max(0, l - nu + 1)
+        nConvEnd = min(l + 1, nx)
+        for m in range(nConv, nConvEnd):
+            n = l - m
+            dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + m] = -D[j * nNode + 2 * nx + nv + n]
+            dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m]
+            dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (D[j * nNode + k * nx + m])
+        for l in range(1, nx - 2):
+            dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + l + 2] = (l + 1) * (l + 2)
+            dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] = -D[j * nNode + k * nx + l + 2] * (l + 1) * (l + 2)
+            nConv = max(0, l - nu + 1)
+            nConvEnd = min(l + 1, nx)
+            for m in range(nConv, nConvEnd):
+                n = l - m
+                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + m] = -D[j * nNode + 2 * nx + nv + n]
+                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m]
+                dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (D[j * nNode + k * nx + m])
+
+        for l in range(nx - 2, nx + nu - 1):
+            nConv = max(0, l - nu + 1)
+            nConvEnd = min(l + 1, nx)
+            for m in range(nConv, nConvEnd):
+                n = l - m
+                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + m] = -D[
+                    j * nNode + 2 * nx + nv + n]
+                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m]
+                dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (D[j * nNode + k * nx + m])
+
+
+    #dynJ, dynC = removeNullConstraints(dynJ, dynC, 1e-10)
+
     ## Setup scalar multiplier constraints
     # TODO implement this
 
@@ -243,15 +248,14 @@ for i in range(nIterations):
                 suppPolC[j * (ncv + 1) * 2 + k * 2 + 1, 0] = math.inf
                 indicesToDelete.append(j * (ncv + 1) * 2 + k * 2)
                 indicesToDelete.append(j * (ncv + 1) * 2 + k * 2 + 1)
-            pass
+
             for l in range(nv):
                 coeff = (dt * k * deltaT) ** l
                 suppPolJ[j * (ncv + 1) * 2 + k * 2, j * nNode + 2 * nx + l] = coeff
                 suppPolJ[j * (ncv + 1) * 2 + k * 2 + 1, j * nNode + 2 * nx + l] = -coeff
                 suppPolC[j * (ncv + 1) * 2 + k * 2, 0] -= coeff * D[j * nNode + 2 * nx + l]
                 suppPolC[j * (ncv + 1) * 2 + k * 2 + 1, 0] += coeff * D[j * nNode + 2 * nx + l]
-            pass
-        pass
+
     suppPolJF = np.delete(suppPolJ, indicesToDelete, axis=0)
     suppPolCF = np.delete(suppPolC, indicesToDelete, axis=0)
 
@@ -260,16 +264,17 @@ for i in range(nIterations):
     Wv = np.identity(2)
     Wu = np.identity(2)
     dynW = np.identity((2 * (nodes - 1) * (nxdd))) * 1
-    Hx, fx = getQuadProgCostFunction(endJ, endC, Wx)
-    Hv, fv = getQuadProgCostFunction(endJv, endCv, Wv)
+    #Hx, fx = getQuadProgCostFunction(endJ, endC, Wx)
+    #Hv, fv = getQuadProgCostFunction(endJv, endCv, Wv)
     Hu, fu = getQuadProgCostFunction(endJu, endCu, Wu)
-    Hdyn, fdyn = getQuadProgCostFunction(dynJ, dynC, dynW)
-    H = Hdyn + rho
-    f = fdyn
+    #Hdyn, fdyn = getQuadProgCostFunction(dynJ, dynC, dynW)
+    H = Hu
+    f = fu
     # Aeq = np.vstack((dynJ, collJx, collJv, collJu))
     # beq = np.vstack((dynC, collCx, collCv, collCu))
-    Aeq = np.vstack((endJ, endJv, endJu, collJx, collJv, collJu))
-    beq = np.vstack((endC, endCv, endCu, collCx, collCv, collCu))
+    Aeq = np.vstack((endJ, endJv, dynJ, collJx, collJv, collJu))
+    beq = np.vstack((endC, endCv, dynC, collCx, collCv, collCu))
+    Aeq, beq = removeNullConstraints(Aeq, beq, 1e-10)
     Ain = suppPolJF
     bin = suppPolCF
 
@@ -295,6 +300,5 @@ for i in range(nIterations):
     D = D + optX
     if i % (nIterations / 10 + 1) == 0:
         plotData(nodes, nodeT, D, nx, nv, nu, i)
-pass
 
 
