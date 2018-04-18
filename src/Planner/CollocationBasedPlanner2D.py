@@ -16,12 +16,18 @@ T = 1.0
 tFlight = 1.4
 tLand = 1.6
 g = -9.81
-xi = np.array([0.0, 0.35])
+xi = np.array([-0.04, 0.35])
 vi = np.array([0.0, 0.0])
 ai = np.array([0.0, 0.0])
-xf = np.array([0.0, 0.39])
+xf = np.array([0.04, 0.39])
 vf = np.array([0.0, 0.0])
 af = np.array([0.0, 0.0])
+
+nvi = 0.0
+nvf = 0.0
+
+nui = -g / xi[1]
+nuf = -g / xf[1]
 
 dF = 0.025
 vLbi = xi[0] - dF
@@ -29,22 +35,21 @@ vUbi = xi[0] + dF
 vLbf = xf[0] - dF
 vUbf = xf[0] + dF
 
-nv = 8  # number of coefficients for CoP trajectory
+nv = 4  # number of coefficients for CoP trajectory
 nx = nv  # number of coefficients for CoM trajectory
-nu = 4  # number of coefficients for parameter trajectory
-mdx = 3  # number of trajectory derivatives to match
-mdv = 1  # number of CoP derivatives to match
-mdu = 0  # number of scalar derivatives to match
+nu = 3  # number of coefficients for parameter trajectory
+mdx = 2  # number of trajectory derivatives to match
+mdv = 2  # number of CoP derivatives to match
+mdu = 2  # number of scalar derivatives to match
 ncv = nv # number of support polygon constraints segment
 
-nodes = 4  # number of nodes into which the system is divided
+nodes = 6  # number of nodes into which the system is divided
 # D = [... nxi nzi nvi nui ...]
 deltaT = T / (nodes - 1)
 
 # Setup nominal trajectory
 dx = (xf - xi) / (nodes - 1)
 D = np.zeros(((nodes - 1) * (2 * nx + nv + nu), 1))
-u0 = - g / xi[1]
 nodeT = [i * deltaT for i in range(nodes)]
 for i in range(nodes - 1):
     t = nodeT[i]
@@ -58,18 +63,18 @@ for i in range(nodes - 1):
         D[i * (2 * nx + nv + nu) + 2 * nx] = xf[0]
     else:
         D[i * (2 * nx + nv + nu) + 2 * nx] = 0.5 * (xf[0] + xi[0])
-    D[i * (2 * nx + nv + nu) + 2 * nx + nv] = u0
+    D[i * (2 * nx + nv + nu) + 2 * nx + nv] = nui
     pass
 
-nIterations = 2
+nIterations = 10
 nNode = (2 * nx + nv + nu)
-# plotData(nodes, nodeT, D, nx, nv, nu, -1)
+plotData(nodes, nodeT, D, nx, nv, nu, -1)
 
 for i in range(nIterations):
     ## Setup end point constraints
+    # Setup initial trajectory constraints
     endJ = np.zeros((12, (nodes - 1) * nNode))
     endC = np.zeros((12, 1))
-    # Setup initial point constraints
     for j in range(2):
         endJ[3 * j + 0, j * nx + 0] = 1.0
         endJ[3 * j + 1, j * nx + 1] = 1.0
@@ -78,7 +83,7 @@ for i in range(nIterations):
         endC[3 * j + 1, 0] = vi[j] - D[0 + j * nx + 1]
         endC[3 * j + 2, 0] = ai[j] - 2.0 * D[0 + j * nx + 2]
         pass
-    # Setup final point constraints
+    # Setup final trajectory constraints
     for j in range(2):
         endC[6 + 3 * j + 0, 0] = xf[j]
         endC[6 + 3 * j + 1, 0] = vf[j]
@@ -92,6 +97,33 @@ for i in range(nIterations):
             endC[6 + 3 * j + 2, 0] -= k * (k - 1) * D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
             pass
         pass
+
+    # Setup initial CoP constraints
+    endJv = np.zeros((2, (nodes - 1) * nNode))
+    endCv = np.zeros((2, 1))
+    endJv[0, 0 + 2 * nx + 0] = 1.0
+    endCv[0, 0] = nvi - D[0 + 2 * nx + 0]
+
+    # Setup final CoP constraints
+    endCv[1, 0] = nvf
+    for k in range(nv):
+        endJv[1, (nodes - 2) * nNode + 2 * nx + k] = deltaT ** k
+        endCv[1, 0] -= D[(nodes - 2) * nNode + 2 * nx + k] * deltaT ** k
+        pass
+
+    # Setup initial scalar constraints
+    endJu = np.zeros((2, (nodes - 1) * nNode))
+    endCu = np.zeros((2, 1))
+    endJu[0, 0 + 2 * nx + nv + 0] = 1.0
+    endCu[0, 0] = nui - D[0 + 2 * nx + nv]
+
+    # Setup final scalarconstraints
+    endCu[1, 0] = nuf
+    for k in range(nu):
+        endJu[1, (nodes - 2) * nNode + 2 * nx + nv + k] = deltaT ** k
+        endCu[1, 0] -= D[(nodes - 2) * nNode + 2 * nx + nv + k] * deltaT ** k
+        pass
+
     ## Setup collocation constraints
     # Trajectory collocation
     collJx = np.zeros(((nodes - 2) * mdx * 2, (nodes - 1) * nNode))
@@ -200,33 +232,44 @@ for i in range(nIterations):
         t = nodeT[j]
         dt = 1.0 / ncv
         for k in range(ncv + 1):
-            for l in range(nu):
+            if t < tFlight:
+                suppPolC[j * (ncv + 1) * 2 + k * 2, 0] = vUbi
+                suppPolC[j * (ncv + 1) * 2 + k * 2 + 1, 0] = -vLbi
+            elif t > tLand:
+                suppPolC[j * (ncv + 1) * 2 + k * 2, 0] = vUbf
+                suppPolC[j * (ncv + 1) * 2 + k * 2 + 1, 0] = -vLbf
+            else:
+                suppPolC[j * (ncv + 1) * 2 + k * 2, 0] = math.inf
+                suppPolC[j * (ncv + 1) * 2 + k * 2 + 1, 0] = math.inf
+                indicesToDelete.append(j * (ncv + 1) * 2 + k * 2)
+                indicesToDelete.append(j * (ncv + 1) * 2 + k * 2 + 1)
+            pass
+            for l in range(nv):
                 coeff = (dt * k * deltaT) ** l
                 suppPolJ[j * (ncv + 1) * 2 + k * 2, j * nNode + 2 * nx + l] = coeff
                 suppPolJ[j * (ncv + 1) * 2 + k * 2 + 1, j * nNode + 2 * nx + l] = -coeff
-                if t < tFlight:
-                    suppPolC[j * (ncv + 1) * 2 + k * 2, 0] = vUbi
-                    suppPolC[j * (ncv + 1) * 2 + k * 2 + 1, 0] = -vLbi
-                elif t > tLand:
-                    suppPolC[j * (ncv + 1) * 2 + k * 2, 0] = vUbf
-                    suppPolC[j * (ncv + 1) * 2 + k * 2 + 1, 0] = -vLbf
-                else:
-                    suppPolC[j * (ncv + 1) * 2 + k * 2, 0] = math.inf
-                    suppPolC[j * (ncv + 1) * 2 + k * 2 + 1, 0] = math.inf
-                    indicesToDelete.append(j * (ncv + 1) * 2 + k * 2)
-                    indicesToDelete.append(j * (ncv + 1) * 2 + k * 2 + 1)
-                pass
+                suppPolC[j * (ncv + 1) * 2 + k * 2, 0] -= coeff * D[j * nNode + 2 * nx + l]
+                suppPolC[j * (ncv + 1) * 2 + k * 2 + 1, 0] += coeff * D[j * nNode + 2 * nx + l]
             pass
         pass
     suppPolJF = np.delete(suppPolJ, indicesToDelete, axis=0)
     suppPolCF = np.delete(suppPolC, indicesToDelete, axis=0)
 
-    rho = np.identity(D.size) * 1e-10
-    W = np.identity(12)
-    H, f = getQuadProgCostFunction(endJ, endC, W)
-    H = H + rho
-    Aeq = np.vstack((collJx, collJv, collJu, dynJ))
-    beq = np.vstack((collCx, collCv, collCu, dynC))
+    rho = np.identity(D.size) * 1
+    Wx = np.identity(12)
+    Wv = np.identity(2)
+    Wu = np.identity(2)
+    dynW = np.identity((2 * (nodes - 1) * (nxdd))) * 1
+    Hx, fx = getQuadProgCostFunction(endJ, endC, Wx)
+    Hv, fv = getQuadProgCostFunction(endJv, endCv, Wv)
+    Hu, fu = getQuadProgCostFunction(endJu, endCu, Wu)
+    Hdyn, fdyn = getQuadProgCostFunction(dynJ, dynC, dynW)
+    H = Hdyn + rho
+    f = fdyn
+    # Aeq = np.vstack((dynJ, collJx, collJv, collJu))
+    # beq = np.vstack((dynC, collCx, collCv, collCu))
+    Aeq = np.vstack((endJ, endJv, endJu, collJx, collJv, collJu))
+    beq = np.vstack((endC, endCv, endCu, collCx, collCv, collCu))
     Ain = suppPolJF
     bin = suppPolCF
 
@@ -236,8 +279,6 @@ for i in range(nIterations):
     h = matrix(bin, tc='d')
     A = matrix(Aeq, tc='d')
     b = matrix(beq, tc='d')
-
-    print(Aeq)
 
     Dmat = np.vstack((H, Aeq, Ain))
     print(np.linalg.matrix_rank(dynJ))
@@ -252,7 +293,8 @@ for i in range(nIterations):
     soln = solvers.qp(P, q, G, h, A, b)
     optX = np.array(soln['x'])
     D = D + optX
-    plotData(nodes, nodeT, D, nx, nv, nu, i)
+    if i % (nIterations / 10 + 1) == 0:
+        plotData(nodes, nodeT, D, nx, nv, nu, i)
 pass
 
 
