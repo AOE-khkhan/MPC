@@ -61,7 +61,7 @@ for i in range(nodes - 1):
     D[i * (2 * nx + nv + nu) + 2 * nx + nv] = u0
     pass
 
-nIterations = 1
+nIterations = 10
 nNode = (2 * nx + nv + nu)
 # plotData(nodes, nodeT, D, nx, nv, nu, -1)
 
@@ -80,14 +80,17 @@ for i in range(nIterations):
         pass
     # Setup final point constraints
     for j in range(2):
+        endC[6 + 3 * j + 0, 0] = xf[j]
+        endC[6 + 3 * j + 1, 0] = vf[j]
+        endC[6 + 3 * j + 2, 0] = af[j]
         for k in range(nx):
             endJ[6 + 3 * j + 0, (nodes - 2) * nNode + j * nx + k] = deltaT ** k
             endJ[6 + 3 * j + 1, (nodes - 2) * nNode + j * nx + k] = k * deltaT ** k
             endJ[6 + 3 * j + 2, (nodes - 2) * nNode + j * nx + k] = k * (k - 1) * deltaT ** k
+            endC[6 + 3 * j + 0, 0] -= D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
+            endC[6 + 3 * j + 1, 0] -= k * D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
+            endC[6 + 3 * j + 2, 0] -= k * (k - 1) * D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
             pass
-        endC[6 + 3 * j + 0, 0] = xf[j] - D[(nodes - 2) * nNode + j * nx]
-        endC[6 + 3 * j + 1, 0] = vf[j] - D[(nodes - 2) * nNode + j * nx + 1]
-        endC[6 + 3 * j + 2, 0] = af[j] - 2.0 * D[(nodes - 2) * nNode + j * nx + 2]
         pass
     ## Setup collocation constraints
     # Trajectory collocation
@@ -101,7 +104,7 @@ for i in range(nIterations):
                 for l in range(nDerivatives):
                     collJx[j * (2 * mdx) + k * mdx + l, j * nNode + k * nx + m] = fact * (deltaT ** (m - l)) * 1.0
                     collJx[j * (2 * mdx) + k * mdx + l, (j + 1) * nNode + k * nx + m] = -fact * (0 ** (m - l)) * 1.0
-                    collCx[j * (2 * mdx) + k * mdx + l, 0] += -fact * (deltaT ** (m - l)) * D[j * nNode + k * nx + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + k * nx + m]
+                    collCx[j * (2 * mdx) + k * mdx + l, 0] = -fact * (deltaT ** (m - l)) * D[j * nNode + k * nx + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + k * nx + m]
                     fact = fact * (m - l)
                 pass
             pass
@@ -116,7 +119,7 @@ for i in range(nIterations):
             for l in range(nDerivatives):
                 collJv[j * mdv + l, j * nNode + 2 * nx + m] = fact * (deltaT ** (m - l)) * 1.0
                 collJv[j * mdv + l, (j + 1) * nNode + 2 * nx + m] = -fact * (0 ** (m - l)) * 1.0
-                collCv[j * mdv + l, 0] += -fact * (deltaT ** (m - l)) * D[j * nNode + 2 * nx + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + 2 * nx + m]
+                collCv[j * mdv + l, 0] = -fact * (deltaT ** (m - l)) * D[j * nNode + 2 * nx + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + 2 * nx + m]
                 fact = fact * (m - l)
             pass
         pass
@@ -131,7 +134,7 @@ for i in range(nIterations):
             for l in range(nDerivatives):
                 collJu[j * mdu + l, j * nNode + 2 * nx + nv + m] = fact * (deltaT ** (m - l)) * 1.0
                 collJu[j * mdu + l, (j + 1) * nNode + 2 * nx + nv + m] = -fact * (0 ** (m - l)) * 1.0
-                collCu[j * mdu + l, 0] += - fact * (deltaT ** (m - l)) * D[j * nNode + 2 * nx + nv + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + 2 * nx + nv + m]
+                collCu[j * mdu + l, 0] = - fact * (deltaT ** (m - l)) * D[j * nNode + 2 * nx + nv + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + 2 * nx + nv + m]
                 fact = fact * (m - l)
             pass
         pass
