@@ -61,7 +61,7 @@ for i in range(nodes - 1):
     D[i * (2 * nx + nv + nu) + 2 * nx + nv] = u0
     pass
 
-nIterations = 10
+nIterations = 2
 nNode = (2 * nx + nv + nu)
 # plotData(nodes, nodeT, D, nx, nv, nu, -1)
 
@@ -104,11 +104,12 @@ for i in range(nIterations):
                 for l in range(nDerivatives):
                     collJx[j * (2 * mdx) + k * mdx + l, j * nNode + k * nx + m] = fact * (deltaT ** (m - l)) * 1.0
                     collJx[j * (2 * mdx) + k * mdx + l, (j + 1) * nNode + k * nx + m] = -fact * (0 ** (m - l)) * 1.0
-                    collCx[j * (2 * mdx) + k * mdx + l, 0] = -fact * (deltaT ** (m - l)) * D[j * nNode + k * nx + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + k * nx + m]
+                    collCx[j * (2 * mdx) + k * mdx + l, 0] += -fact * (deltaT ** (m - l)) * D[j * nNode + k * nx + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + k * nx + m]
                     fact = fact * (m - l)
                 pass
             pass
         pass
+
     # CoP collocation
     collJv = np.zeros(((nodes - 2) * mdv, (nodes - 1) * nNode))
     collCv = np.zeros(((nodes - 2) * mdv, 1))
@@ -119,7 +120,7 @@ for i in range(nIterations):
             for l in range(nDerivatives):
                 collJv[j * mdv + l, j * nNode + 2 * nx + m] = fact * (deltaT ** (m - l)) * 1.0
                 collJv[j * mdv + l, (j + 1) * nNode + 2 * nx + m] = -fact * (0 ** (m - l)) * 1.0
-                collCv[j * mdv + l, 0] = -fact * (deltaT ** (m - l)) * D[j * nNode + 2 * nx + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + 2 * nx + m]
+                collCv[j * mdv + l, 0] += -fact * (deltaT ** (m - l)) * D[j * nNode + 2 * nx + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + 2 * nx + m]
                 fact = fact * (m - l)
             pass
         pass
@@ -134,7 +135,7 @@ for i in range(nIterations):
             for l in range(nDerivatives):
                 collJu[j * mdu + l, j * nNode + 2 * nx + nv + m] = fact * (deltaT ** (m - l)) * 1.0
                 collJu[j * mdu + l, (j + 1) * nNode + 2 * nx + nv + m] = -fact * (0 ** (m - l)) * 1.0
-                collCu[j * mdu + l, 0] = - fact * (deltaT ** (m - l)) * D[j * nNode + 2 * nx + nv + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + 2 * nx + nv + m]
+                collCu[j * mdu + l, 0] += -fact * (deltaT ** (m - l)) * D[j * nNode + 2 * nx + nv + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + 2 * nx + nv + m]
                 fact = fact * (m - l)
             pass
         pass
@@ -219,7 +220,7 @@ for i in range(nIterations):
     suppPolJF = np.delete(suppPolJ, indicesToDelete, axis=0)
     suppPolCF = np.delete(suppPolC, indicesToDelete, axis=0)
 
-    rho = np.identity(D.size) * 1e-15
+    rho = np.identity(D.size) * 1e-10
     W = np.identity(12)
     H, f = getQuadProgCostFunction(endJ, endC, W)
     H = H + rho
@@ -236,7 +237,14 @@ for i in range(nIterations):
     b = matrix(beq, tc='d')
 
     Dmat = np.vstack((H, Aeq, Ain))
-    soln = solvers.qp(P, q, G, h)
+    print(np.linalg.matrix_rank(Dmat))
+    print(D.shape)
+    print(np.linalg.matrix_rank(Ain))
+    print(Ain.shape)
+    print(np.linalg.matrix_rank(Aeq))
+    print(Aeq.shape)
+
+    soln = solvers.qp(P, q, G, h, A, b)
     optX = np.array(soln['x'])
     D = D + optX
     plotData(nodes, nodeT, D, nx, nv, nu, i)

@@ -202,7 +202,6 @@ def plotData(nodes, nodeT, D, nx, nv, nu, i):
         tFinal = nodeT[j + 1]
         coeffX = D[j * nNode: j * nNode + nx]
         coeffZ = D[j * nNode + nx: j * nNode + 2 * nx]
-        print("CoeffZ " + str(j) + " : "+ str(coeffZ.T))
         coeffV = D[j * nNode + 2 * nx: j * nNode + 2 * nx + nv]
         coeffU = D[j * nNode + 2 * nx + nv: j * nNode + 2 * nx + nv + nu]
         pointsToCalc = int((tFinal - tInitial) / plotDt)
@@ -230,7 +229,6 @@ def plotData(nodes, nodeT, D, nx, nv, nu, i):
             uSoln.append(val.item((0)))
         pass
     pass
-    print(zSoln)
     fig = plt.figure()
     fig.suptitle("Iteration " + str(i))
     plotX = fig.add_subplot(221)
