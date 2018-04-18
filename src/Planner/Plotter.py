@@ -188,3 +188,74 @@ def generateData(coeffs, tmin, tmax, nPoints):
         for j in range(coeffs.size):
             data[i] += np.power(t, j) * coeffs[j, 0]
     return data
+
+def plotData(nodes, nodeT, D, nx, nv, nu, i):
+    nNode = 2 * nx + nv + nu
+    tSoln = []
+    xSoln = []
+    zSoln = []
+    uSoln = []
+    vSoln = []
+    plotDt = 0.001
+    for j in range(nodes - 1):
+        tInitial = nodeT[j]
+        tFinal = nodeT[j + 1]
+        coeffX = D[j * nNode: j * nNode + nx]
+        coeffZ = D[j * nNode + nx: j * nNode + 2 * nx]
+        print("CoeffZ " + str(j) + " : "+ str(coeffZ.T))
+        coeffV = D[j * nNode + 2 * nx: j * nNode + 2 * nx + nv]
+        coeffU = D[j * nNode + 2 * nx + nv: j * nNode + 2 * nx + nv + nu]
+        pointsToCalc = int((tFinal - tInitial) / plotDt)
+        for l in range(pointsToCalc):
+            tSoln.append((tInitial + plotDt * l))
+            val = 0.0
+            for k in range(nx):
+                val += coeffX[k] * (plotDt * l) ** k
+                pass
+            xSoln.append(val.item((0)))
+            val = 0.0
+            for k in range(nx):
+                val += coeffZ[k] * (plotDt * l) ** k
+                pass
+            zSoln.append(val.item((0)))
+            val = 0.0
+            for k in range(nv):
+                val += coeffV[k] * (plotDt * l) ** k
+                pass
+            vSoln.append(val.item((0)))
+            val = 0.0
+            for k in range(nu):
+                val += coeffU[k] * (plotDt * l) ** k
+                pass
+            uSoln.append(val.item((0)))
+        pass
+    pass
+    print(zSoln)
+    fig = plt.figure()
+    fig.suptitle("Iteration " + str(i))
+    plotX = fig.add_subplot(221)
+    plotX.plot(tSoln, xSoln)
+    plotX.set_ylabel("X")
+    plotX.grid()
+    for tval in nodeT:
+        plotX.axvline(x=tval, color="red", linewidth=0.2)
+    plotZ = fig.add_subplot(222)
+    plotZ.plot(tSoln, zSoln)
+    plotZ.set_ylabel("Z")
+    plotZ.grid()
+    for tval in nodeT:
+        plotZ.axvline(x=tval, color="red", linewidth=0.2)
+    plotV = fig.add_subplot(223)
+    plotV.plot(tSoln, vSoln)
+    plotV.set_ylabel("V")
+    plotV.grid()
+    for tval in nodeT:
+        plotV.axvline(x=tval, color="red", linewidth=0.2)
+    plotU = fig.add_subplot(224)
+    plotU.plot(tSoln, uSoln)
+    plotU.set_ylabel("U")
+    plotU.grid()
+    for tval in nodeT:
+        plotU.axvline(x=tval, color="red", linewidth=0.2)
+    fig.show()
+
