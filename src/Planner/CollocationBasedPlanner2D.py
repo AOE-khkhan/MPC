@@ -8,7 +8,7 @@ from src.Planner.Plotter import plotData
 np.set_printoptions(threshold=np.inf)
 np.set_printoptions(precision=3)
 np.set_printoptions(suppress=True)
-
+np.set_printoptions(linewidth=1000)
 '''This code solves for a CoM trajectory when the forces exerted on the system can only be along the line
 joining the CoP and CoM'''
 
@@ -29,15 +29,15 @@ vUbi = xi[0] + dF
 vLbf = xf[0] - dF
 vUbf = xf[0] + dF
 
-nv = 8  # number of coefficients for CoP trajectory
+nv = 3  # number of coefficients for CoP trajectory
 nx = nv  # number of coefficients for CoM trajectory
-nu = 3  # number of coefficients for parameter trajectory
+nu = 1  # number of coefficients for parameter trajectory
 mdx = 3  # number of trajectory derivatives to match
 mdv = 1  # number of CoP derivatives to match
 mdu = 1  # number of scalar derivatives to match
 ncv = nv # number of support polygon constraints segment
 
-nodes = 6  # number of nodes into which the system is divided
+nodes = 3  # number of nodes into which the system is divided
 # D = [... nxi nzi nvi nui ...]
 deltaT = T / (nodes - 1)
 
@@ -141,35 +141,37 @@ for i in range(nIterations):
         pass
 
     ## Setup equality differential dynamic constraints
-    dynJ = np.zeros((2 * (nodes - 1) * (nx + nu), (nodes - 1) * nNode))
-    dynC = np.zeros((2 * (nodes - 1) * (nx + nu), 1))
+    nxdd = nx + nu - 1
+    dynJ = np.zeros((2 * (nodes - 1) * (nxdd), (nodes - 1) * nNode))
+    dynC = np.zeros((2 * (nodes - 1) * (nxdd), 1))
     gvec = np.array([[0.0], [g]])
     for j in range(nodes - 1):
         for k in range(2):
             l = 0
-            dynJ[j * 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + k * nx + l + 2] = (l + 1) * (l + 2)
-            dynC[j * 2 * (nx + nu) + k * (nx + nu) + l, 0] = -D[j * nNode + k * nx + l + 2] * (l + 1) * (l + 2)
+            dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + l + 2] = (l + 1) * (l + 2)
+            dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] = -D[j * nNode + k * nx + l + 2] * (l + 1) * (l + 2) + gvec[k]
             nConv = max(0, l - nu + 1)
             for m in range(nConv, l + 1):
                 n = l - m
-                dynJ[j * 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + k * nx + m] = -D[j * nNode + 2 * nx + nv + n]
-                dynJ[j * 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + 2 * nx + m] = D[j * nNode + 2 * nx + nv + n]
-                dynJ[j + 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m] + \
+                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + m] = -D[j * nNode + 2 * nx + nv + n]
+                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + m] = D[j * nNode + 2 * nx + nv + n]
+                print(D.shape)
+                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m] + \
                                                                                            D[j * nNode + 2 * nx + m]
-                dynC[j * 2 * (nx + nu) + k * (nx + nu) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (
-                            D[j * nNode + k * nx + m] - D[j * nNode + 2 * nx + m]) + gvec[k]
+                dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (
+                            D[j * nNode + k * nx + m] - D[j * nNode + 2 * nx + m])
                 pass
             pass
             for l in range(1, nx - 2):
-                dynJ[j * 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + k * nx + l + 2] = (l + 1) * (l + 2)
-                dynC[j * 2 * (nx + nu) + k * (nx + nu) + l, 0] = -D[j * nNode + k * nx + l + 2] * (l + 1) * (l + 2)
+                dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + l + 2] = (l + 1) * (l + 2)
+                dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] = -D[j * nNode + k * nx + l + 2] * (l + 1) * (l + 2)
                 nConv = max(0, l - nu + 1)
                 for m in range(nConv, l + 1):
                     n = l - m
-                    dynJ[j * 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + k * nx + m] = -D[j * nNode + 2 * nx + nv + n]
-                    dynJ[j * 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + 2 * nx + m] = D[j * nNode + 2 * nx + nv + n]
-                    dynJ[j + 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m] + D[j * nNode + 2 * nx + m]
-                    dynC[j * 2 * (nx + nu) + k * (nx + nu) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (D[j * nNode + k * nx + m] - D[j * nNode + 2 * nx + m])
+                    dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + m] = -D[j * nNode + 2 * nx + nv + n]
+                    dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + m] = D[j * nNode + 2 * nx + nv + n]
+                    dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m] + D[j * nNode + 2 * nx + m]
+                    dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (D[j * nNode + k * nx + m] - D[j * nNode + 2 * nx + m])
                     pass
                 pass
             pass
@@ -177,12 +179,13 @@ for i in range(nIterations):
                 nConv = max(0, l - nu + 1)
                 for m in range(nConv, l + 1):
                     n = l - m
-                    dynJ[j * 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + k * nx + m] = -D[
+                    print(str(j) + " " + str(k) + " " + str(l) + " " + str(m) + " " + str(n))
+                    dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + m] = -D[
                         j * nNode + 2 * nx + nv + n]
-                    dynJ[j * 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + 2 * nx + m] = D[j * nNode + 2 * nx + nv + n]
-                    dynJ[j + 2 * (nx + nu) + k * (nx + nu) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m]\
+                    dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + m] = D[j * nNode + 2 * nx + nv + n]
+                    dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m]\
                                                                                                + D[j * nNode + 2 * nx + m]
-                    dynC[j * 2 * (nx + nu) + k * (nx + nu) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (
+                    dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (
                                 D[j * nNode + k * nx + m] - D[j * nNode + 2 * nx + m])
                     pass
                 pass
@@ -236,7 +239,11 @@ for i in range(nIterations):
     A = matrix(Aeq, tc='d')
     b = matrix(beq, tc='d')
 
+    print(dynJ)
+
     Dmat = np.vstack((H, Aeq, Ain))
+    print(np.linalg.matrix_rank(dynJ))
+    print(dynJ.shape)
     print(np.linalg.matrix_rank(Dmat))
     print(D.shape)
     print(np.linalg.matrix_rank(Ain))
