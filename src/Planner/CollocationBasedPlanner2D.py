@@ -29,15 +29,15 @@ vUbi = xi[0] + dF
 vLbf = xf[0] - dF
 vUbf = xf[0] + dF
 
-nv = 3  # number of coefficients for CoP trajectory
+nv = 8  # number of coefficients for CoP trajectory
 nx = nv  # number of coefficients for CoM trajectory
-nu = 1  # number of coefficients for parameter trajectory
+nu = 4  # number of coefficients for parameter trajectory
 mdx = 3  # number of trajectory derivatives to match
 mdv = 1  # number of CoP derivatives to match
-mdu = 1  # number of scalar derivatives to match
+mdu = 0  # number of scalar derivatives to match
 ncv = nv # number of support polygon constraints segment
 
-nodes = 3  # number of nodes into which the system is divided
+nodes = 4  # number of nodes into which the system is divided
 # D = [... nxi nzi nvi nui ...]
 deltaT = T / (nodes - 1)
 
@@ -155,7 +155,6 @@ for i in range(nIterations):
                 n = l - m
                 dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + m] = -D[j * nNode + 2 * nx + nv + n]
                 dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + m] = D[j * nNode + 2 * nx + nv + n]
-                print(D.shape)
                 dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + nv + n] = -D[j * nNode + k * nx + m] + \
                                                                                            D[j * nNode + 2 * nx + m]
                 dynC[j * 2 * (nxdd) + k * (nxdd) + l, 0] += D[j * nNode + 2 * nx + nv + n] * (
@@ -179,7 +178,6 @@ for i in range(nIterations):
                 nConv = max(0, l - nu + 1)
                 for m in range(nConv, l + 1):
                     n = l - m
-                    print(str(j) + " " + str(k) + " " + str(l) + " " + str(m) + " " + str(n))
                     dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + k * nx + m] = -D[
                         j * nNode + 2 * nx + nv + n]
                     dynJ[j * 2 * (nxdd) + k * (nxdd) + l, j * nNode + 2 * nx + m] = D[j * nNode + 2 * nx + nv + n]
@@ -239,7 +237,7 @@ for i in range(nIterations):
     A = matrix(Aeq, tc='d')
     b = matrix(beq, tc='d')
 
-    print(dynJ)
+    print(Aeq)
 
     Dmat = np.vstack((H, Aeq, Ain))
     print(np.linalg.matrix_rank(dynJ))
