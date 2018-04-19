@@ -48,7 +48,7 @@ mdx = 2  # number of trajectory derivatives to match
 mdv = 2  # number of CoP derivatives to match
 mdu = 2  # number of scalar derivatives to match
 ncv = 4  # number of support polygon constraints segment
-ndyn = 4  # number of points in a segment to enforce dynamics constraints at
+ndyn = 5  # number of points in a segment to enforce dynamics constraints at
 ncu = 3  # number of points in a segment to enforce the scalar equality and inequality constraints
 
 nodes = 11  # number of nodes into which the system is divided
