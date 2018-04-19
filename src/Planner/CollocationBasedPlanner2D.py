@@ -13,24 +13,24 @@ np.set_printoptions(linewidth=1000)
 joining the CoP and CoM'''
 
 solvers.options['refinement'] = 1
-solvers.options['reltol'] = 1e-10
-solvers.options['abstol'] = 1e-11
-solvers.options['feastol'] = 1e-11
+solvers.options['reltol'] = 1e-4
+solvers.options['abstol'] = 1e-5
+solvers.options['feastol'] = 1e-5
 solvers.options['maxiters'] = 500
 
-T = 1.0
-tFlight = 1.4
-tLand = 1.6
+T = 1.1
+tFlight = 0.11 * 5
+tLand = 0.11 * 6
 g = -9.81
-xi = np.array([-0.01, 0.35])
+xi = np.array([-0.07, 0.35])
 vi = np.array([0.0, 0.0])
 ai = np.array([0.0, 0.0])
-xf = np.array([0.01, 0.35])
+xf = np.array([0.07, 0.35])
 vf = np.array([0.0, 0.0])
 af = np.array([0.0, 0.0])
 
-nvi = -0.01
-nvf = 0.01
+nvi = -0.07
+nvf = 0.07
 
 nui = -g / xi[1]
 nuf = -g / xf[1]
@@ -43,15 +43,15 @@ vUbf = xf[0] + dF
 
 nv = 8  # number of coefficients for CoP trajectory
 nx = nv  # number of coefficients for CoM trajectory
-nu = 3  # number of coefficients for parameter trajectory
+nu = 4  # number of coefficients for parameter trajectory
 mdx = 2  # number of trajectory derivatives to match
 mdv = 2  # number of CoP derivatives to match
 mdu = 2  # number of scalar derivatives to match
-ncv = nv - 1 # number of support polygon constraints segment
-ndyn = 4 # number of points in a segment to enforce dynamics constraints at
-ncu = 3 # number of points in a segment to enforce the scalar equality and inequality constraints
+ncv = 4  # number of support polygon constraints segment
+ndyn = 4  # number of points in a segment to enforce dynamics constraints at
+ncu = 3  # number of points in a segment to enforce the scalar equality and inequality constraints
 
-nodes = 6  # number of nodes into which the system is divided
+nodes = 11  # number of nodes into which the system is divided
 # D = [... nxi nzi nvi nui ...]
 deltaT = T / (nodes - 1)
 
@@ -73,7 +73,7 @@ for i in range(nodes - 1):
         D[i * (2 * nx + nv + nu) + 2 * nx] = 0.5 * (xf[0] + xi[0])
     D[i * (2 * nx + nv + nu) + 2 * nx + nv] = nui
 
-nIterations = 14
+nIterations = 5
 nNode = (2 * nx + nv + nu)
 plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, -1)
 
@@ -173,6 +173,7 @@ for i in range(nIterations):
     dynC = np.zeros((2 * (nodes - 1) * (ndyn), 1))
     ddt = deltaT / (ndyn + 1)
     for j in range(nodes - 1):
+        t = nodeT[j]
         for k in range(ndyn):
             uVal = 0.0
             ddt_k = ddt * (k + 1)
@@ -193,29 +194,42 @@ for i in range(nIterations):
             for l in range(nx):
                 dynJ[j * 2 * ndyn + k, j * nNode + 0 * nx + l] = (ddt_k ** (l - 2)) * l * (l - 1) - uVal * (ddt_k ** l)
                 dynJ[j * 2 * ndyn + k, j * nNode + 2 * nx + l] = uVal * (ddt_k **l)
+            #if(t >= tFlight and t < tLand):
             for l in range(nu):
                 dynJ[j * 2 * ndyn + k, j * nNode + 2 * nx + nv + l] = (vVal - xVal) * (ddt_k ** l)
             dynC[j * 2 * ndyn + k, 0] = uVal * (xVal - vVal) - xddVal
             ## Z axis
             for l in range(nx):
                 dynJ[j * 2 * ndyn + ndyn + k, j * nNode + 1 * nx + l] = (ddt_k ** (l - 2)) * l * (l - 1) - uVal * (ddt_k ** l)
+            #if(t >= tFlight and t < tLand):
             for l in range(nu):
                 dynJ[j * 2 * ndyn + ndyn + k, j * nNode + 2 * nx + nv + l] = (-zVal) * (ddt_k ** l)
             dynC[j * 2 * ndyn + ndyn + k, 0] = uVal * zVal - zddVal + g
 
     ## Setup scalar multiplier constraints
-    conJinu = np.zeros(((nodes - 1) * ncu, (nodes - 1) * nNode))
-    conCinu = np.zeros(((nodes - 1) * ncu, 1))
+    conJu = np.zeros(((nodes - 1) * ncu, (nodes - 1) * nNode))
+    conCu = np.zeros(((nodes - 1) * ncu, 1))
+    uInRowList = []
+    uEqRowList = []
     ddt = deltaT / (ncu + 1)
     for j in range(nodes - 1):
+        t = nodeT[j]
         for k in range(ncu):
             ddt_k = ddt * (k + 1)
+            if t >= tFlight and t < tLand:
+                uEqRowList.append(j * ncu + k)
+            else:
+                uInRowList.append(j * ncu + k)
             uVal = 0.0
             for l in range(nu):
                 coeff = (ddt_k) ** l
                 uVal += D[j * nNode + 2 * nx + nv + l] * coeff
-                conJinu[j * ncu + k, j * nNode + 2 * nx + nv + l] = -coeff
-            conCinu[j * ncu + k, 0] = uVal
+                conJu[j * ncu + k, j * nNode + 2 * nx + nv + l] = -coeff
+            conCu[j * ncu + k, 0] = uVal
+    conJinu = np.delete(np.copy(conJu), uEqRowList, axis=0)
+    conCinu = np.delete(np.copy(conCu), uEqRowList, axis=0)
+    conJequ = np.delete(np.copy(conJu), uInRowList, axis=0)
+    conCequ = np.delete(np.copy(conCu), uInRowList, axis=0)
 
     ## Setup cop location constraints
     indicesToDelete = []
@@ -228,7 +242,7 @@ for i in range(nIterations):
             if t < tFlight:
                 suppPolC[j * (ncv + 1) * 2 + k * 2, 0] = vUbi
                 suppPolC[j * (ncv + 1) * 2 + k * 2 + 1, 0] = -vLbi
-            elif t > tLand:
+            elif t >= tLand:
                 suppPolC[j * (ncv + 1) * 2 + k * 2, 0] = vUbf
                 suppPolC[j * (ncv + 1) * 2 + k * 2 + 1, 0] = -vLbf
             else:
@@ -260,18 +274,19 @@ for i in range(nIterations):
     rho = np.identity(D.size) * 1e-3
     Wx = np.identity(12)
     Wv = np.identity(2)
-    Wu = np.identity(2)
-    Wacc = np.identity(2)
+    #Wu = np.identity(conJequ.shape[0]) * 100
+    Wacc = np.identity(2) * 1
     #Hx, fx = getQuadProgCostFunction(endJ, endC, Wx)
     #Hv, fv = getQuadProgCostFunction(endJv, endCv, Wv)
     Hacc, facc = getQuadProgCostFunction(objJacc, -objCacc, Wacc)
+    #Hu, fu = getQuadProgCostFunction(conJequ, conCequ, Wu)
     #Hdyn, fdyn = getQuadProgCostFunction(dynJ, dynC, dynW)
     H = Hacc + rho
     f = facc
     # Aeq = np.vstack((dynJ, collJx, collJv, collJu))
     # beq = np.vstack((dynC, collCx, collCv, collCu))
-    Aeq = np.vstack((endJ, endJv, endJu, dynJ, collJx, collJv, collJu))
-    beq = np.vstack((endC, endCv, endCu, dynC, collCx, collCv, collCu))
+    Aeq = np.vstack((endJ, endJv, endJu, dynJ, collJx, collJv, collJu, conJequ))
+    beq = np.vstack((endC, endCv, endCu, dynC, collCx, collCv, collCu, conCequ))
     Aeq, beq = removeNullConstraints(Aeq, beq, 1e-10)
     Ain = np.vstack((suppPolJF, conJinu))
     bin = np.vstack((suppPolCF, conCinu))
@@ -283,15 +298,15 @@ for i in range(nIterations):
     A = matrix(Aeq, tc='d')
     b = matrix(beq, tc='d')
 
-    Dmat = np.vstack((H, Aeq, Ain))
-    #print(np.linalg.matrix_rank(dynJ))
-    #print(dynJ.shape)
-    #print(np.linalg.matrix_rank(Dmat))
-    #print(D.shape)
-    #print(np.linalg.matrix_rank(Ain))
-    #print(Ain.shape)
-    #print(np.linalg.matrix_rank(Aeq))
-    #print(Aeq.shape)
+    Dmat = np.vstack((Aeq, Ain))
+    print(np.linalg.matrix_rank(dynJ))
+    print(dynJ.shape)
+    print(np.linalg.matrix_rank(Dmat))
+    print(Dmat.shape)
+    print(np.linalg.matrix_rank(Ain))
+    print(Ain.shape)
+    print(np.linalg.matrix_rank(Aeq))
+    print(Aeq.shape)
 
     soln = solvers.qp(P, q, G, h, A, b)
     output = soln['status']
