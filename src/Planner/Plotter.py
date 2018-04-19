@@ -196,6 +196,8 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
     zSoln = []
     uSoln = []
     vSoln = []
+    xErrSoln = []
+    zErrSoln = []
     plotDt = 0.001
     for j in range(nodes - 1):
         tInitial = nodeT[j]
@@ -207,53 +209,74 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
         pointsToCalc = int((tFinal - tInitial) / plotDt)
         for l in range(pointsToCalc):
             tSoln.append((tInitial + plotDt * l))
-            val = 0.0
+            x = 0.0
+            xdd = 0.0
             for k in range(nx):
-                val += coeffX[k] * (plotDt * l) ** k
+                x += coeffX[k] * (plotDt * l) ** k
+                if k - 2 >= 0:
+                    xdd += coeffX[k] * (plotDt * l) ** (k - 2) * k * (k - 1)
                 pass
-            xSoln.append(val.item((0)))
-            val = 0.0
+            xSoln.append(x.item((0)))
+            z = 0.0
+            zdd = 0.0
             for k in range(nx):
-                val += coeffZ[k] * (plotDt * l) ** k
+                z += coeffZ[k] * (plotDt * l) ** k
+                if k - 2 >= 0:
+                    zdd += coeffZ[k] * (plotDt * l) ** (k - 2) * k * (k - 1)
                 pass
-            zSoln.append(val.item((0)))
-            val = 0.0
+            zSoln.append(z.item((0)))
+            v = 0.0
             for k in range(nv):
-                val += coeffV[k] * (plotDt * l) ** k
+                v += coeffV[k] * (plotDt * l) ** k
                 pass
-            vSoln.append(val.item((0)))
-            val = 0.0
+            vSoln.append(v.item((0)))
+            u = 0.0
             for k in range(nu):
-                val += coeffU[k] * (plotDt * l) ** k
+                u += coeffU[k] * (plotDt * l) ** k
                 pass
-            uSoln.append(val.item((0)))
+            uSoln.append(u.item((0)))
+            xErr = xdd - u * (x - v)
+            zErr = zdd - u * z + 9.81
+            xErrSoln.append(xErr.item((0)))
+            zErrSoln.append(zErr.item((0)))
         pass
     pass
     fig = plt.figure()
     fig.suptitle("Iteration " + str(i))
-    plotX = fig.add_subplot(221)
+    plotX = fig.add_subplot(321)
     plotX.plot(tSoln, xSoln)
     plotX.set_ylabel("X")
     plotX.grid()
     for tval in nodeT:
         plotX.axvline(x=tval, color="red", linewidth=0.2)
-    plotZ = fig.add_subplot(222)
+    plotZ = fig.add_subplot(322)
     plotZ.plot(tSoln, zSoln)
     plotZ.set_ylabel("Z")
     plotZ.grid()
     for tval in nodeT:
         plotZ.axvline(x=tval, color="red", linewidth=0.2)
-    plotV = fig.add_subplot(223)
+    plotV = fig.add_subplot(323)
     plotV.plot(tSoln, vSoln)
     plotV.set_ylabel("V")
     plotV.grid()
     for tval in nodeT:
         plotV.axvline(x=tval, color="red", linewidth=0.2)
-    plotU = fig.add_subplot(224)
+    plotU = fig.add_subplot(324)
     plotU.plot(tSoln, uSoln)
     plotU.set_ylabel("U")
     plotU.grid()
     for tval in nodeT:
         plotU.axvline(x=tval, color="red", linewidth=0.2)
+    plotXErr = fig.add_subplot(325)
+    plotXErr.plot(tSoln, xErrSoln)
+    plotXErr.set_ylabel("XErr")
+    plotXErr.grid()
+    for tval in nodeT:
+        plotXErr.axvline(x=tval, color="red", linewidth=0.2)
+    plotZErr = fig.add_subplot(326)
+    plotZErr.plot(tSoln, zErrSoln)
+    plotZErr.set_ylabel("ZErr")
+    plotZErr.grid()
+    for tval in nodeT:
+        plotZErr.axvline(x=tval, color="red", linewidth=0.2)
     fig.show()
-

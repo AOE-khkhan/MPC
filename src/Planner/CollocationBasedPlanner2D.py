@@ -16,14 +16,14 @@ T = 1.0
 tFlight = 0.4
 tLand = 0.6
 g = -9.81
-xi = np.array([0.01, 0.35])
+xi = np.array([-0.01, 0.35])
 vi = np.array([0.0, 0.0])
 ai = np.array([0.0, 0.0])
-xf = np.array([0.01, 0.3])
+xf = np.array([0.01, 0.35])
 vf = np.array([0.0, 0.0])
 af = np.array([0.0, 0.0])
 
-nvi = 0.01
+nvi = -0.01
 nvf = 0.01
 
 nui = -g / xi[1]
@@ -43,7 +43,7 @@ mdv = 2  # number of CoP derivatives to match
 mdu = 2  # number of scalar derivatives to match
 ncv = nv - 1 # number of support polygon constraints segment
 ndyn = 4 # number of points in a segment to enforce dynamics constraints at
-ncu = 2 # number of poitns in a segment to enforce the scalar equality and inequality constraints
+ncu = 2 # number of points in a segment to enforce the scalar equality and inequality constraints
 
 nodes = 6  # number of nodes into which the system is divided
 # D = [... nxi nzi nvi nui ...]
@@ -115,7 +115,7 @@ for i in range(nIterations):
     endJu[0, 0 + 2 * nx + nv + 0] = 1.0
     endCu[0, 0] = nui - D[0 + 2 * nx + nv]
 
-    # Setup final scalarconstraints
+    # Setup final scalar constraints
     endCu[1, 0] = nuf
     for k in range(nu):
         endJu[1, (nodes - 2) * nNode + 2 * nx + nv + k] = deltaT ** k
@@ -211,7 +211,6 @@ for i in range(nIterations):
                 conJinu[j * ncu + k, j * nNode + 2 * nx + nv + l] = -coeff
             conCinu[j * ncu + k, 0] = uVal
 
-
     ## Setup cop location constraints
     indicesToDelete = []
     suppPolJ = np.zeros(((nodes - 1) * (ncv + 1) * 2, (nodes - 1)* nNode ))
@@ -231,7 +230,6 @@ for i in range(nIterations):
                 suppPolC[j * (ncv + 1) * 2 + k * 2 + 1, 0] = math.inf
                 indicesToDelete.append(j * (ncv + 1) * 2 + k * 2)
                 indicesToDelete.append(j * (ncv + 1) * 2 + k * 2 + 1)
-
             for l in range(nv):
                 coeff = (dt * k * deltaT) ** l
                 suppPolJ[j * (ncv + 1) * 2 + k * 2, j * nNode + 2 * nx + l] = coeff
@@ -242,7 +240,7 @@ for i in range(nIterations):
     suppPolJF = np.delete(suppPolJ, indicesToDelete, axis=0)
     suppPolCF = np.delete(suppPolC, indicesToDelete, axis=0)
 
-    rho = np.identity(D.size) * 1e-5
+    rho = np.identity(D.size) * 1e-6
     Wx = np.identity(12)
     Wv = np.identity(2)
     Wu = np.identity(2)
@@ -280,5 +278,4 @@ for i in range(nIterations):
     soln = solvers.qp(P, q, G, h, A, b)
     optX = np.array(soln['x'])
     D = D + optX
-    #if i % (nIterations / 10 + 1) == 0:
     plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i)
