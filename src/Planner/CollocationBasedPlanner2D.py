@@ -18,9 +18,9 @@ solvers.options['abstol'] = 1e-5
 solvers.options['feastol'] = 1e-5
 solvers.options['maxiters'] = 500
 
-T = 1.1
-tFlight = 0.11 * 5
-tLand = 0.11 * 6
+T = 1.0
+tFlight = 0.1 * 5
+tLand = 0.1 * 7
 g = -9.81
 xi = np.array([-0.07, 0.35])
 vi = np.array([0.0, 0.0])
@@ -29,8 +29,8 @@ xf = np.array([0.07, 0.35])
 vf = np.array([0.0, 0.0])
 af = np.array([0.0, 0.0])
 
-nvi = -0.07
-nvf = 0.07
+nvi = -0.05
+nvf = 0.05
 
 nui = -g / xi[1]
 nuf = -g / xf[1]
@@ -73,7 +73,8 @@ for i in range(nodes - 1):
         D[i * (2 * nx + nv + nu) + 2 * nx] = 0.5 * (xf[0] + xi[0])
     D[i * (2 * nx + nv + nu) + 2 * nx + nv] = nui
 
-nIterations = 5
+nIterations = 10
+
 nNode = (2 * nx + nv + nu)
 plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, -1)
 
@@ -127,8 +128,8 @@ for i in range(nIterations):
         endJu[1, (nodes - 2) * nNode + 2 * nx + nv + k] = deltaT ** k
         endCu[1, 0] -= D[(nodes - 2) * nNode + 2 * nx + nv + k] * deltaT ** k
 
-    ## Setup collocation constraints
-    # Trajectory collocation
+    ## Setup smoothness constraints
+    # Trajectory smoothness
     collJx = np.zeros(((nodes - 2) * mdx * 2, (nodes - 1) * nNode))
     collCx = np.zeros(((nodes - 2) * mdx * 2, 1))
     for j in range(0, nodes - 2):
@@ -142,7 +143,7 @@ for i in range(nIterations):
                     collCx[j * (2 * mdx) + k * mdx + l, 0] += -fact * (deltaT ** (m - l)) * D[j * nNode + k * nx + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + k * nx + m]
                     fact = fact * (m - l)
 
-    # CoP collocation
+    # CoP smoothness
     collJv = np.zeros(((nodes - 2) * mdv, (nodes - 1) * nNode))
     collCv = np.zeros(((nodes - 2) * mdv, 1))
     for j in range(0, nodes - 2):
@@ -155,7 +156,7 @@ for i in range(nIterations):
                 collCv[j * mdv + l, 0] += -fact * (deltaT ** (m - l)) * D[j * nNode + 2 * nx + m] + fact * (0 ** (m - l)) * D[(j + 1) * nNode + 2 * nx + m]
                 fact = fact * (m - l)
 
-    # Scalar multiplier collocation
+    # Scalar multiplier smoothness
     collJu = np.zeros(((nodes - 2) * mdu, (nodes - 1) * nNode))
     collCu = np.zeros(((nodes - 2) * mdu, 1))
     for j in range(0, nodes - 2):

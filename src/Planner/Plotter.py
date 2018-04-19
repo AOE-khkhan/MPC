@@ -194,6 +194,10 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
     tSoln = []
     xSoln = []
     zSoln = []
+    AxSoln = []
+    AzSoln = []
+    AxpSoln = []
+    AzpSoln = []
     uSoln = []
     vSoln = []
     xErrSoln = []
@@ -235,48 +239,69 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
                 u += coeffU[k] * (plotDt * l) ** k
                 pass
             uSoln.append(u.item((0)))
-            xErr = xdd - u * (x - v)
-            zErr = zdd - u * z + 9.81
+            ax = u * (x - v)
+            az = u * (z - 0) - 9.81
+            xErr = xdd - ax
+            zErr = zdd - az
             xErrSoln.append(xErr.item((0)))
             zErrSoln.append(zErr.item((0)))
+            AxSoln.append(ax.item((0)))
+            AzSoln.append(az.item((0)))
+            AxpSoln.append(xdd.item((0)))
+            AzpSoln.append(zdd.item((0)))
         pass
     pass
     fig = plt.figure()
     fig.suptitle("Iteration " + str(i))
-    plotX = fig.add_subplot(321)
+    plotX = fig.add_subplot(421)
     plotX.plot(tSoln, xSoln)
+    plotX.plot(tSoln, vSoln, 'r--')
     plotX.set_ylabel("X")
     plotX.grid()
     for tval in nodeT:
         plotX.axvline(x=tval, color="red", linewidth=0.2)
-    plotZ = fig.add_subplot(322)
+    plotZ = fig.add_subplot(422)
     plotZ.plot(tSoln, zSoln)
     plotZ.set_ylabel("Z")
     plotZ.grid()
     for tval in nodeT:
         plotZ.axvline(x=tval, color="red", linewidth=0.2)
-    plotV = fig.add_subplot(323)
+    plotV = fig.add_subplot(423)
     plotV.plot(tSoln, vSoln)
     plotV.set_ylabel("V")
     plotV.grid()
     for tval in nodeT:
         plotV.axvline(x=tval, color="red", linewidth=0.2)
-    plotU = fig.add_subplot(324)
+    plotU = fig.add_subplot(424)
     plotU.plot(tSoln, uSoln)
     plotU.set_ylabel("U")
     plotU.grid()
     for tval in nodeT:
         plotU.axvline(x=tval, color="red", linewidth=0.2)
-    plotXErr = fig.add_subplot(325)
+    plotXErr = fig.add_subplot(425)
     plotXErr.plot(tSoln, xErrSoln)
     plotXErr.set_ylabel("XErr")
     plotXErr.grid()
     for tval in nodeT:
         plotXErr.axvline(x=tval, color="red", linewidth=0.2)
-    plotZErr = fig.add_subplot(326)
+    plotZErr = fig.add_subplot(426)
     plotZErr.plot(tSoln, zErrSoln)
     plotZErr.set_ylabel("ZErr")
     plotZErr.grid()
     for tval in nodeT:
         plotZErr.axvline(x=tval, color="red", linewidth=0.2)
+    plotAx = fig.add_subplot(427)
+    plotAx.plot(tSoln, AxSoln)
+    plotAx.plot(tSoln, AxpSoln, 'r--')
+    plotAx.set_ylabel("Xddot")
+    plotAx.grid()
+    for tval in nodeT:
+        plotAx.axvline(x=tval, color="red", linewidth=0.2)
+    plotAz = fig.add_subplot(428)
+    plotAz.plot(tSoln, AzSoln)
+    plotAz.plot(tSoln, AzpSoln, 'r--')
+    plotAz.set_ylabel("Zddot")
+    plotAz.grid()
+    for tval in nodeT:
+        plotAz.axvline(x=tval, color="red", linewidth=0.2)
     fig.show()
