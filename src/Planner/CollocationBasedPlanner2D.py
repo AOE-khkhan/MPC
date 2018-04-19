@@ -81,28 +81,28 @@ plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, -1)
 for i in range(nIterations):
     ## Setup end point constraints
     # Setup initial trajectory constraints
-    endJ = np.zeros((12, (nodes - 1) * nNode))
-    endC = np.zeros((12, 1))
+    endJ = np.zeros((8, (nodes - 1) * nNode))
+    endC = np.zeros((8, 1))
     for j in range(2):
-        endJ[3 * j + 0, j * nx + 0] = 1.0
-        endJ[3 * j + 1, j * nx + 1] = 1.0
-        endJ[3 * j + 2, j * nx + 2] = 2.0
-        endC[3 * j + 0, 0] = xi[j] - D[0 + j * nx]
-        endC[3 * j + 1, 0] = vi[j] - D[0 + j * nx + 1]
-        endC[3 * j + 2, 0] = ai[j] - 2.0 * D[0 + j * nx + 2]
+        endJ[2 * j + 0, j * nx + 0] = 1.0
+        endJ[2 * j + 1, j * nx + 1] = 1.0
+        #endJ[3 * j + 2, j * nx + 2] = 2.0
+        endC[2 * j + 0, 0] = xi[j] - D[0 + j * nx]
+        endC[2 * j + 1, 0] = vi[j] - D[0 + j * nx + 1]
+        #endC[3 * j + 2, 0] = ai[j] - 2.0 * D[0 + j * nx + 2]
 
     # Setup final trajectory constraints
     for j in range(2):
-        endC[6 + 3 * j + 0, 0] = xf[j]
-        endC[6 + 3 * j + 1, 0] = vf[j]
-        endC[6 + 3 * j + 2, 0] = af[j]
+        endC[4 + 2 * j + 0, 0] = xf[j]
+        endC[4 + 2 * j + 1, 0] = vf[j]
+        #endC[4 + 2 * j + 2, 0] = af[j]
         for k in range(nx):
-            endJ[6 + 3 * j + 0, (nodes - 2) * nNode + j * nx + k] = deltaT ** k
-            endJ[6 + 3 * j + 1, (nodes - 2) * nNode + j * nx + k] = k * deltaT ** k
-            endJ[6 + 3 * j + 2, (nodes - 2) * nNode + j * nx + k] = k * (k - 1) * deltaT ** k
-            endC[6 + 3 * j + 0, 0] -= D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
-            endC[6 + 3 * j + 1, 0] -= k * D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
-            endC[6 + 3 * j + 2, 0] -= k * (k - 1) * D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
+            endJ[4 + 2 * j + 0, (nodes - 2) * nNode + j * nx + k] = deltaT ** k
+            endJ[4 + 2 * j + 1, (nodes - 2) * nNode + j * nx + k] = k * deltaT ** k
+            #endJ[4 + 2 * j + 2, (nodes - 2) * nNode + j * nx + k] = k * (k - 1) * deltaT ** k
+            endC[4 + 2 * j + 0, 0] -= D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
+            endC[4 + 2 * j + 1, 0] -= k * D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
+            #endC[4 + 2 * j + 2, 0] -= k * (k - 1) * D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
 
     # Setup initial CoP constraints
     endJv = np.zeros((2, (nodes - 1) * nNode))
@@ -172,12 +172,12 @@ for i in range(nIterations):
     ## Setup equality differential dynamic constraints
     dynJ = np.zeros((2 * (nodes - 1) * (ndyn), (nodes - 1) * nNode))
     dynC = np.zeros((2 * (nodes - 1) * (ndyn), 1))
-    ddt = deltaT / (ndyn + 1)
+    ddt = deltaT / (ndyn - 1)
     for j in range(nodes - 1):
         t = nodeT[j]
         for k in range(ndyn):
             uVal = 0.0
-            ddt_k = ddt * (k + 1)
+            ddt_k = ddt * (k)
             for l in range(nu):
                 uVal += D[j * nNode + 2 * nx + nv + l] * (ddt_k) ** l
             xVal = 0.0
@@ -187,13 +187,21 @@ for i in range(nIterations):
             zddVal = 0.0
             for l in range(nx):
                 xVal += D[j * nNode + l] * (ddt_k) ** l
-                xddVal += D[j * nNode + l] * (ddt_k) ** (l - 2) * l * (l - 1)
+                if l >=2:
+                    ddt_k_l = (ddt_k) ** (l - 2)
+                else:
+                    ddt_k_l = 0.0
+                xddVal += D[j * nNode + l] * ddt_k_l * l * (l - 1)
                 zVal += D[j * nNode + nx + l] * (ddt_k) ** l
-                zddVal += D[j * nNode + nx + l] * (ddt_k) ** (l - 2) * l * (l - 1)
+                zddVal += D[j * nNode + nx + l] * ddt_k_l * l * (l - 1)
                 vVal += D[j * nNode + 2 * nx +  l] * (ddt_k) ** l
             ## X axis
             for l in range(nx):
-                dynJ[j * 2 * ndyn + k, j * nNode + 0 * nx + l] = (ddt_k ** (l - 2)) * l * (l - 1) - uVal * (ddt_k ** l)
+                if l >=2:
+                    ddt_k_l = (ddt_k) ** (l - 2)
+                else:
+                    ddt_k_l = 0.0
+                dynJ[j * 2 * ndyn + k, j * nNode + 0 * nx + l] = (ddt_k_l) * l * (l - 1) - uVal * (ddt_k ** l)
                 dynJ[j * 2 * ndyn + k, j * nNode + 2 * nx + l] = uVal * (ddt_k **l)
             #if(t >= tFlight and t < tLand):
             for l in range(nu):
@@ -201,7 +209,11 @@ for i in range(nIterations):
             dynC[j * 2 * ndyn + k, 0] = uVal * (xVal - vVal) - xddVal
             ## Z axis
             for l in range(nx):
-                dynJ[j * 2 * ndyn + ndyn + k, j * nNode + 1 * nx + l] = (ddt_k ** (l - 2)) * l * (l - 1) - uVal * (ddt_k ** l)
+                if l >=2:
+                    ddt_k_l = (ddt_k) ** (l - 2)
+                else:
+                    ddt_k_l = 0.0
+                dynJ[j * 2 * ndyn + ndyn + k, j * nNode + 1 * nx + l] = (ddt_k_l) * l * (l - 1) - uVal * (ddt_k ** l)
             #if(t >= tFlight and t < tLand):
             for l in range(nu):
                 dynJ[j * 2 * ndyn + ndyn + k, j * nNode + 2 * nx + nv + l] = (-zVal) * (ddt_k ** l)
