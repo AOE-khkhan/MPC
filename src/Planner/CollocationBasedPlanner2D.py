@@ -12,9 +12,15 @@ np.set_printoptions(linewidth=1000)
 '''This code solves for a CoM trajectory when the forces exerted on the system can only be along the line
 joining the CoP and CoM'''
 
+solvers.options['refinement'] = 1
+solvers.options['reltol'] = 1e-10
+solvers.options['abstol'] = 1e-11
+solvers.options['feastol'] = 1e-11
+solvers.options['maxiters'] = 500
+
 T = 1.0
-tFlight = 0.4
-tLand = 0.6
+tFlight = 1.4
+tLand = 1.6
 g = -9.81
 xi = np.array([-0.01, 0.35])
 vi = np.array([0.0, 0.0])
@@ -35,15 +41,15 @@ vUbi = xi[0] + dF
 vLbf = xf[0] - dF
 vUbf = xf[0] + dF
 
-nv = 6  # number of coefficients for CoP trajectory
+nv = 8  # number of coefficients for CoP trajectory
 nx = nv  # number of coefficients for CoM trajectory
-nu = 4  # number of coefficients for parameter trajectory
-mdx = 3  # number of trajectory derivatives to match
+nu = 3  # number of coefficients for parameter trajectory
+mdx = 2  # number of trajectory derivatives to match
 mdv = 2  # number of CoP derivatives to match
 mdu = 2  # number of scalar derivatives to match
 ncv = nv - 1 # number of support polygon constraints segment
 ndyn = 4 # number of points in a segment to enforce dynamics constraints at
-ncu = 2 # number of points in a segment to enforce the scalar equality and inequality constraints
+ncu = 3 # number of points in a segment to enforce the scalar equality and inequality constraints
 
 nodes = 6  # number of nodes into which the system is divided
 # D = [... nxi nzi nvi nui ...]
@@ -67,7 +73,7 @@ for i in range(nodes - 1):
         D[i * (2 * nx + nv + nu) + 2 * nx] = 0.5 * (xf[0] + xi[0])
     D[i * (2 * nx + nv + nu) + 2 * nx + nv] = nui
 
-nIterations = 5
+nIterations = 14
 nNode = (2 * nx + nv + nu)
 plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, -1)
 
@@ -240,20 +246,32 @@ for i in range(nIterations):
     suppPolJF = np.delete(suppPolJ, indicesToDelete, axis=0)
     suppPolCF = np.delete(suppPolC, indicesToDelete, axis=0)
 
-    rho = np.identity(D.size) * 1e-6
+    ## Setup acceleration minimization objective
+    objJacc = np.zeros((2 , (nodes - 1) * nNode))
+    objCacc = np.zeros((2 , 1))
+    for j in range(2):
+        for k in range(nodes - 1):
+            for l in range(nx):
+                for m in range(l, nx + l):
+                    coeff = (deltaT ** m + 1) / (m + 1) * l * (l - 1) * (m - l) * (m - l - 1) * D[k * nNode + j * nx + m - l]
+                    objJacc[j,  k * nNode + j * nx + l] += coeff
+                    objCacc[j, 0] += coeff * D[k * nNode + j * nx + l]
+
+    rho = np.identity(D.size) * 1e-3
     Wx = np.identity(12)
     Wv = np.identity(2)
     Wu = np.identity(2)
+    Wacc = np.identity(2)
     #Hx, fx = getQuadProgCostFunction(endJ, endC, Wx)
     #Hv, fv = getQuadProgCostFunction(endJv, endCv, Wv)
-    Hu, fu = getQuadProgCostFunction(endJu, endCu, Wu)
+    Hacc, facc = getQuadProgCostFunction(objJacc, -objCacc, Wacc)
     #Hdyn, fdyn = getQuadProgCostFunction(dynJ, dynC, dynW)
-    H = Hu + rho
-    f = fu
+    H = Hacc + rho
+    f = facc
     # Aeq = np.vstack((dynJ, collJx, collJv, collJu))
     # beq = np.vstack((dynC, collCx, collCv, collCu))
-    Aeq = np.vstack((endJ, endJv, dynJ, collJx, collJv, collJu))
-    beq = np.vstack((endC, endCv, dynC, collCx, collCv, collCu))
+    Aeq = np.vstack((endJ, endJv, endJu, dynJ, collJx, collJv, collJu))
+    beq = np.vstack((endC, endCv, endCu, dynC, collCx, collCv, collCu))
     Aeq, beq = removeNullConstraints(Aeq, beq, 1e-10)
     Ain = np.vstack((suppPolJF, conJinu))
     bin = np.vstack((suppPolCF, conCinu))
@@ -266,16 +284,18 @@ for i in range(nIterations):
     b = matrix(beq, tc='d')
 
     Dmat = np.vstack((H, Aeq, Ain))
-    print(np.linalg.matrix_rank(dynJ))
-    print(dynJ.shape)
-    print(np.linalg.matrix_rank(Dmat))
-    print(D.shape)
-    print(np.linalg.matrix_rank(Ain))
-    print(Ain.shape)
-    print(np.linalg.matrix_rank(Aeq))
-    print(Aeq.shape)
+    #print(np.linalg.matrix_rank(dynJ))
+    #print(dynJ.shape)
+    #print(np.linalg.matrix_rank(Dmat))
+    #print(D.shape)
+    #print(np.linalg.matrix_rank(Ain))
+    #print(Ain.shape)
+    #print(np.linalg.matrix_rank(Aeq))
+    #print(Aeq.shape)
 
     soln = solvers.qp(P, q, G, h, A, b)
+    output = soln['status']
+    print("Iteration " + str(i) + " terminated with status " + output)
     optX = np.array(soln['x'])
     D = D + optX
     plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i)
