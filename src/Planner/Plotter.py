@@ -189,7 +189,7 @@ def generateData(coeffs, tmin, tmax, nPoints):
             data[i] += np.power(t, j) * coeffs[j, 0]
     return data
 
-def plotData(nodes, nodeT, D, nx, nv, nu, i):
+def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
     nNode = 2 * nx + nv + nu
     tSoln = []
     xSoln = []
