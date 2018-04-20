@@ -19,25 +19,25 @@ solvers.options['feastol'] = 1e-5
 solvers.options['maxiters'] = 500
 
 T = 1.0
-tFlight = 0.1 * 5
-tLand = 0.1 * 7
+tFlight = 1.4
+tLand = 1.6
 g = -9.81
-xi = np.array([-0.07, 0.35])
-vi = np.array([0.0, 0.0])
+xi = np.array([-0.03, 0.35])
+vi = np.array([0.1, 0.0])
 ai = np.array([0.0, 0.0])
-xf = np.array([0.07, 0.35])
-vf = np.array([0.0, 0.0])
+xf = np.array([0.03, 0.35])
+vf = np.array([0.1, 0.0])
 af = np.array([0.0, 0.0])
 
-nvi = -0.05
-nvf = 0.05
+nvi = 0.00
+nvf = 0.00
 
 nui = -g / xi[1]
 nuf = -g / xf[1]
 
 dF = 0.025
-vLbi = xi[0] - dF
-vUbi = xi[0] + dF
+vLbi = - dF
+vUbi = + dF
 vLbf = xf[0] - dF
 vUbf = xf[0] + dF
 
@@ -73,7 +73,7 @@ for i in range(nodes - 1):
         D[i * (2 * nx + nv + nu) + 2 * nx] = 0.5 * (xf[0] + xi[0])
     D[i * (2 * nx + nv + nu) + 2 * nx + nv] = nui
 
-nIterations = 10
+nIterations = 5
 
 nNode = (2 * nx + nv + nu)
 plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, -1)
@@ -98,10 +98,10 @@ for i in range(nIterations):
         #endC[4 + 2 * j + 2, 0] = af[j]
         for k in range(nx):
             endJ[4 + 2 * j + 0, (nodes - 2) * nNode + j * nx + k] = deltaT ** k
-            endJ[4 + 2 * j + 1, (nodes - 2) * nNode + j * nx + k] = k * deltaT ** k
+            endJ[4 + 2 * j + 1, (nodes - 2) * nNode + j * nx + k] = k * deltaT ** (k - 1)
             #endJ[4 + 2 * j + 2, (nodes - 2) * nNode + j * nx + k] = k * (k - 1) * deltaT ** k
             endC[4 + 2 * j + 0, 0] -= D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
-            endC[4 + 2 * j + 1, 0] -= k * D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
+            endC[4 + 2 * j + 1, 0] -= k * D[(nodes - 2) * nNode + j * nx + k] * deltaT ** (k - 1)
             #endC[4 + 2 * j + 2, 0] -= k * (k - 1) * D[(nodes - 2) * nNode + j * nx + k] * deltaT ** k
 
     # Setup initial CoP constraints
@@ -298,8 +298,8 @@ for i in range(nIterations):
     f = facc
     # Aeq = np.vstack((dynJ, collJx, collJv, collJu))
     # beq = np.vstack((dynC, collCx, collCv, collCu))
-    Aeq = np.vstack((endJ, endJv, endJu, dynJ, collJx, collJv, collJu, conJequ))
-    beq = np.vstack((endC, endCv, endCu, dynC, collCx, collCv, collCu, conCequ))
+    Aeq = np.vstack((endJ, endJu, dynJ, collJx, collJv, collJu, conJequ))
+    beq = np.vstack((endC, endCu, dynC, collCx, collCv, collCu, conCequ))
     Aeq, beq = removeNullConstraints(Aeq, beq, 1e-10)
     Ain = np.vstack((suppPolJF, conJinu))
     bin = np.vstack((suppPolCF, conCinu))
