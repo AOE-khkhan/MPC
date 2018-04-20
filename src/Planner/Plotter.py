@@ -204,6 +204,7 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
     vSoln = []
     xErrSoln = []
     zErrSoln = []
+    MySoln = []
     plotDt = 0.001
     for j in range(nodes - 1):
         tInitial = nodeT[j]
@@ -253,15 +254,17 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
             az = u * (z - 0) - 9.81
             xErr = xdd - ax
             zErr = zdd - az
+            My = (zdd + 9.81) * (x - v) - xdd * (z - 0)
             xErrSoln.append(xErr.item((0)))
             zErrSoln.append(zErr.item((0)))
             axSoln.append(ax.item((0)))
             azSoln.append(az.item((0)))
             axpSoln.append(xdd.item((0)))
             azpSoln.append(zdd.item((0)))
+            MySoln.append(My.item((0)))
         pass
     pass
-    rows = 5
+    rows = 6
     cols = 2
     fig = plt.figure()
     fig.suptitle("Iteration " + str(i))
@@ -328,4 +331,10 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
     plotZErr.grid()
     for tval in nodeT:
         plotZErr.axvline(x=tval, color="red", linewidth=0.2)
+    plotMy = fig.add_subplot(rows, cols, 11)
+    plotMy.plot(tSoln, MySoln)
+    plotMy.set_ylabel("My")
+    plotMy.grid()
+    for tval in nodeT:
+        plotMy.axvline(x=tval, color="red", linewidth=0.2)
     fig.show()
