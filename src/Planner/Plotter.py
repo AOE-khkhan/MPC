@@ -337,4 +337,6 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
     plotMy.grid()
     for tval in nodeT:
         plotMy.axvline(x=tval, color="red", linewidth=0.2)
+    name = 'Plot' + str(i) + '.png'
     fig.show()
+    # fig.savefig(name)

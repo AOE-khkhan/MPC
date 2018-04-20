@@ -9,6 +9,7 @@ np.set_printoptions(threshold=np.inf)
 np.set_printoptions(precision=3)
 np.set_printoptions(suppress=True)
 np.set_printoptions(linewidth=1000)
+
 '''This code solves for a CoM trajectory when the forces exerted on the system can only be along the line
 joining the CoP and CoM'''
 
@@ -19,13 +20,13 @@ solvers.options['feastol'] = 1e-5
 solvers.options['maxiters'] = 500
 
 T = 1.0
-tFlight = 0.5
-tLand = 0.6
+tFlight = 0.45
+tLand = 0.55
 g = -9.81
-xi = np.array([-0.1, 0.35])
+xi = np.array([-0.04, 0.35])
 vi = np.array([0.0, 0.0])
 ai = np.array([0.0, 0.0])
-xf = np.array([0.1, 0.35])
+xf = np.array([0.04, 0.35])
 vf = np.array([0.0, 0.0])
 af = np.array([0.0, 0.0])
 
@@ -36,6 +37,8 @@ nui = -g / xi[1]
 nuf = -g / xf[1]
 
 dF = 0.025
+dxmax = np.array([0.1, 0.02])
+dxmin = np.array([-0.1, -0.05])
 vLbi = xi[0] - dF
 vUbi = xi[0] + dF
 vLbf = xf[0] - dF
@@ -48,10 +51,11 @@ mdx = 2  # number of trajectory derivatives to match
 mdv = 2  # number of CoP derivatives to match
 mdu = 2  # number of scalar derivatives to match
 ncv = 4  # number of support polygon constraints segment
+ncx = 4 # number of location constraints on CoM
 ndyn = 5  # number of points in a segment to enforce dynamics constraints at
 ncu = 3  # number of points in a segment to enforce the scalar equality and inequality constraints
 
-nodes = 11  # number of nodes into which the system is divided
+nodes = 21  # number of nodes into which the system is divided
 # D = [... nxi nzi nvi nui ...]
 deltaT = T / (nodes - 1)
 
@@ -273,6 +277,37 @@ for i in range(nIterations):
     suppPolJF = np.delete(suppPolJ, indicesToDelete, axis=0)
     suppPolCF = np.delete(suppPolC, indicesToDelete, axis=0)
 
+    ## Setup CoM location constraints
+    indicesToDelete = []
+    locConJx = np.zeros(((nodes - 1) * 2 * 2 * ncx, (nodes - 1) * nNode))
+    locConCx = np.zeros(((nodes - 1) * 2 * 2 * ncx,1))
+    ddt = deltaT / (ncx)
+    for j in range(nodes - 1):
+        t = nodeT[j]
+        for k in range(2):
+            for l in range(ncx):
+                ddt_l = ddt * l
+                if t + ddt_l <= tFlight:
+                    locConCx[j * 2 * 2 * ncx + k * 2 * ncx + l * 2, 0] = xi[k] + dxmax[k]
+                    locConCx[j * 2 * 2 * ncx + k * 2 * ncx + l * 2 + 1, 0] = - (xi[k] + dxmin[k])
+                elif t + ddt_l >= tLand:
+                    locConCx[j * 2 * 2 * ncx + k * 2 * ncx + l * 2, 0] = xf[k] + dxmax[k]
+                    locConCx[j * 2 * 2 * ncx + k * 2 * ncx + l * 2 + 1, 0] = - (xf[k] + dxmin[k])
+                    pass
+                else:
+                    locConCx[j * 2 * 2 * ncx + k * 2 * ncx + l * 2, 0] = math.inf
+                    locConCx[j * 2 * 2 * ncx + k * 2 * ncx + l * 2 + 1, 0] = math.inf
+                    indicesToDelete.append(j * 2 * 2 * ncx + k * 2 * ncx + l * 2)
+                    indicesToDelete.append(j * 2 * 2 * ncx + k * 2 * ncx + l * 2 + 1)
+                for m in range(nx):
+                    coeff = ddt_l ** m
+                    locConJx[j * 2 * 2 * ncx + k * 2 * ncx + l * 2, j * nNode + k * nx + m] = coeff
+                    locConJx[j * 2 * 2 * ncx + k * 2 * ncx + l * 2 + 1, j * nNode + k * nx + m] = -coeff
+                    locConCx[j * 2 * 2 * ncx + k * 2 * ncx + l * 2, 0] -= coeff * D[j * nNode + k * nx + m]
+                    locConCx[j * 2 * 2 * ncx + k * 2 * ncx + l * 2 + 1, 0] += coeff * D[j * nNode + k * nx + m]
+    locConJxF = np.delete(locConJx, indicesToDelete, axis=0)
+    locConCxF = np.delete(locConCx, indicesToDelete, axis=0)
+
     ## Setup acceleration minimization objective
     objJacc = np.zeros((2 , (nodes - 1) * nNode))
     objCacc = np.zeros((2 , 1))
@@ -301,8 +336,8 @@ for i in range(nIterations):
     Aeq = np.vstack((endJ, endJu, endJv, dynJ, collJx, collJv, collJu, conJequ))
     beq = np.vstack((endC, endCu, endCv, dynC, collCx, collCv, collCu, conCequ))
     Aeq, beq = removeNullConstraints(Aeq, beq, 1e-10)
-    Ain = np.vstack((suppPolJF, conJinu))
-    bin = np.vstack((suppPolCF, conCinu))
+    Ain = np.vstack((suppPolJF, conJinu, locConJxF))
+    bin = np.vstack((suppPolCF, conCinu, locConCxF))
 
     P = matrix(H, tc='d')
     q = matrix(f, tc='d')
