@@ -198,6 +198,10 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
     vzSoln = []
     axSoln = []
     azSoln = []
+    FxSoln = []
+    FzSoln = []
+    ForceRatio  = []
+    PosRatio = []
     axpSoln = []
     azpSoln = []
     uSoln = []
@@ -206,6 +210,7 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
     zErrSoln = []
     MySoln = []
     plotDt = 0.001
+    mass = 18.0
     for j in range(nodes - 1):
         tInitial = nodeT[j]
         tFinal = nodeT[j + 1]
@@ -252,6 +257,8 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
             uSoln.append(u.item((0)))
             ax = u * (x - v)
             az = u * (z - 0) - 9.81
+            Fx = mass * ax
+            Fz = mass * (az + 9.81)
             xErr = xdd - ax
             zErr = zdd - az
             My = (zdd + 9.81) * (x - v) - xdd * (z - 0)
@@ -259,6 +266,10 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
             zErrSoln.append(zErr.item((0)))
             axSoln.append(ax.item((0)))
             azSoln.append(az.item((0)))
+            FxSoln.append(Fx.item((0)))
+            FzSoln.append(Fz.item((0)))
+            ForceRatio.append(Fx.item((0)) / Fz.item((0)))
+            PosRatio.append((x.item((0)) - v.item((0)))/ z.item((0)))
             axpSoln.append(xdd.item((0)))
             azpSoln.append(zdd.item((0)))
             MySoln.append(My.item((0)))
@@ -301,7 +312,7 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
         plotVx.axvline(x=tval, color="red", linewidth=0.2)
     plotVz = fig.add_subplot(rows, cols, 6)
     plotVz.plot(tSoln, vzSoln)
-    plotVz.set_ylabel("Zddot")
+    plotVz.set_ylabel("Zdot")
     plotVz.grid()
     for tval in nodeT:
         plotVz.axvline(x=tval, color="red", linewidth=0.2)
@@ -337,6 +348,10 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
     plotMy.grid()
     for tval in nodeT:
         plotMy.axvline(x=tval, color="red", linewidth=0.2)
+    plotComp = fig.add_subplot(rows, cols, 12)
+    plotComp.plot(PosRatio, ForceRatio)
+    plotComp.set_ylabel("AccComp")
+    plotComp.grid()
     name = 'Plot' + str(i) + '.png'
     fig.show()
     # fig.savefig(name)

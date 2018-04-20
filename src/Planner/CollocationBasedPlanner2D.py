@@ -361,4 +361,5 @@ for i in range(nIterations):
     print("Iteration " + str(i) + " terminated with status " + output)
     optX = np.array(soln['x'])
     D = D + optX
-    plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i)
+    if i == nIterations - 1:
+        plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i)
