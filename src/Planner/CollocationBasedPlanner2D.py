@@ -23,13 +23,13 @@ tFlight = 1.4
 tLand = 1.6
 g = -9.81
 xi = np.array([-0.03, 0.35])
-vi = np.array([0.1, 0.0])
+vi = np.array([0.05, 0.0])
 ai = np.array([0.0, 0.0])
-xf = np.array([0.03, 0.35])
-vf = np.array([0.1, 0.0])
+xf = np.array([0.0, 0.35])
+vf = np.array([0.0, 0.0])
 af = np.array([0.0, 0.0])
 
-nvi = 0.00
+nvi = -0.025
 nvf = 0.00
 
 nui = -g / xi[1]
@@ -73,7 +73,7 @@ for i in range(nodes - 1):
         D[i * (2 * nx + nv + nu) + 2 * nx] = 0.5 * (xf[0] + xi[0])
     D[i * (2 * nx + nv + nu) + 2 * nx + nv] = nui
 
-nIterations = 5
+nIterations = 3
 
 nNode = (2 * nx + nv + nu)
 plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, -1)
@@ -298,8 +298,8 @@ for i in range(nIterations):
     f = facc
     # Aeq = np.vstack((dynJ, collJx, collJv, collJu))
     # beq = np.vstack((dynC, collCx, collCv, collCu))
-    Aeq = np.vstack((endJ, endJu, dynJ, collJx, collJv, collJu, conJequ))
-    beq = np.vstack((endC, endCu, dynC, collCx, collCv, collCu, conCequ))
+    Aeq = np.vstack((endJ, endJu, endJv, dynJ, collJx, collJv, collJu, conJequ))
+    beq = np.vstack((endC, endCu, endCv, dynC, collCx, collCv, collCu, conCequ))
     Aeq, beq = removeNullConstraints(Aeq, beq, 1e-10)
     Ain = np.vstack((suppPolJF, conJinu))
     bin = np.vstack((suppPolCF, conCinu))
