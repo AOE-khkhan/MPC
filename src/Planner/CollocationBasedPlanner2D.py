@@ -19,25 +19,25 @@ solvers.options['feastol'] = 1e-5
 solvers.options['maxiters'] = 500
 
 T = 1.0
-tFlight = 1.4
-tLand = 1.6
+tFlight = 0.5
+tLand = 0.6
 g = -9.81
-xi = np.array([-0.03, 0.35])
-vi = np.array([0.05, 0.0])
+xi = np.array([-0.1, 0.35])
+vi = np.array([0.0, 0.0])
 ai = np.array([0.0, 0.0])
-xf = np.array([0.0, 0.35])
+xf = np.array([0.1, 0.35])
 vf = np.array([0.0, 0.0])
 af = np.array([0.0, 0.0])
 
-nvi = -0.025
-nvf = 0.00
+nvi = xi[0]
+nvf = xf[0]
 
 nui = -g / xi[1]
 nuf = -g / xf[1]
 
 dF = 0.025
-vLbi = - dF
-vUbi = + dF
+vLbi = xi[0] - dF
+vUbi = xi[0] + dF
 vLbf = xf[0] - dF
 vUbf = xf[0] + dF
 
@@ -73,7 +73,7 @@ for i in range(nodes - 1):
         D[i * (2 * nx + nv + nu) + 2 * nx] = 0.5 * (xf[0] + xi[0])
     D[i * (2 * nx + nv + nu) + 2 * nx + nv] = nui
 
-nIterations = 3
+nIterations = 10
 
 nNode = (2 * nx + nv + nu)
 plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, -1)
