@@ -19,19 +19,19 @@ solvers.options['abstol'] = 1e-5
 solvers.options['feastol'] = 1e-5
 solvers.options['maxiters'] = 500
 
-T = 1.0
-tFlight = 0.45
-tLand = 0.55
+T = 0.8
+tFlight = 0.32
+tLand = 0.48
 g = -9.81
-xi = np.array([-0.04, 0.35])
-vi = np.array([0.0, 0.0])
+xi = np.array([-0.055, 0.30])
+vi = np.array([0.155, 0.0])
 ai = np.array([0.0, 0.0])
-xf = np.array([0.04, 0.35])
-vf = np.array([0.0, 0.0])
+xf = np.array([0.055, 0.30])
+vf = np.array([0.155, 0.0])
 af = np.array([0.0, 0.0])
 
-nvi = xi[0]
-nvf = xf[0]
+nvi = -0.02 #xi[0]
+nvf = 0.02
 
 nui = -g / xi[1]
 nuf = -g / xf[1]
@@ -39,10 +39,10 @@ nuf = -g / xf[1]
 dF = 0.025
 dxmax = np.array([0.1, 0.02])
 dxmin = np.array([-0.1, -0.05])
-vLbi = xi[0] - dF
-vUbi = xi[0] + dF
-vLbf = xf[0] - dF
-vUbf = xf[0] + dF
+vLbi = nvi - dF
+vUbi = nvi + dF
+vLbf = nvf - dF
+vUbf = nvf + dF
 
 nv = 8  # number of coefficients for CoP trajectory
 nx = nv  # number of coefficients for CoM trajectory
@@ -55,7 +55,7 @@ ncx = 4 # number of location constraints on CoM
 ndyn = 5  # number of points in a segment to enforce dynamics constraints at
 ncu = 3  # number of points in a segment to enforce the scalar equality and inequality constraints
 
-nodes = 21  # number of nodes into which the system is divided
+nodes = 11  # number of nodes into which the system is divided
 # D = [... nxi nzi nvi nui ...]
 deltaT = T / (nodes - 1)
 

@@ -268,7 +268,7 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
             azSoln.append(az.item((0)))
             FxSoln.append(Fx.item((0)))
             FzSoln.append(Fz.item((0)))
-            ForceRatio.append(Fx.item((0)) / Fz.item((0)))
+            #ForceRatio.append(Fx.item((0)) / Fz.item((0)))
             PosRatio.append((x.item((0)) - v.item((0)))/ z.item((0)))
             axpSoln.append(xdd.item((0)))
             azpSoln.append(zdd.item((0)))
@@ -348,10 +348,6 @@ def plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i):
     plotMy.grid()
     for tval in nodeT:
         plotMy.axvline(x=tval, color="red", linewidth=0.2)
-    plotComp = fig.add_subplot(rows, cols, 12)
-    plotComp.plot(PosRatio, ForceRatio)
-    plotComp.set_ylabel("AccComp")
-    plotComp.grid()
-    name = 'Plot' + str(i) + '.png'
+    # name = 'Plot' + str(i) + '.png'
     fig.show()
     # fig.savefig(name)
