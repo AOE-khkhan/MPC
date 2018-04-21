@@ -77,10 +77,10 @@ for i in range(nodes - 1):
         D[i * (2 * nx + nv + nu) + 2 * nx] = 0.5 * (xf[0] + xi[0])
     D[i * (2 * nx + nv + nu) + 2 * nx + nv] = nui
 
-nIterations = 10
+nIterations = 5
 
 nNode = (2 * nx + nv + nu)
-plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, -1)
+#plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, -1)
 
 for i in range(nIterations):
     ## Setup end point constraints
