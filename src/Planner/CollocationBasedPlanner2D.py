@@ -19,26 +19,26 @@ solvers.options['abstol'] = 1e-5
 solvers.options['feastol'] = 1e-5
 solvers.options['maxiters'] = 500
 
-T = 0.8
-tFlight = 0.32
-tLand = 0.48
+T = 1.0
+tFlight = 0.50
+tLand = 0.60
 g = -9.81
-xi = np.array([-0.055, 0.30])
-vi = np.array([0.155, 0.0])
+xi = np.array([-0.1, 0.35])
+vi = np.array([0.275, -0.1])
 ai = np.array([0.0, 0.0])
-xf = np.array([0.055, 0.30])
-vf = np.array([0.155, 0.0])
+xf = np.array([0.1, 0.35])
+vf = np.array([0.275, 0.1])
 af = np.array([0.0, 0.0])
 
-nvi = -0.02 #xi[0]
-nvf = 0.02
+nvi = -0.06
+nvf = 0.06
 
 nui = -g / xi[1]
 nuf = -g / xf[1]
 
 dF = 0.025
-dxmax = np.array([0.1, 0.02])
-dxmin = np.array([-0.1, -0.05])
+dxmax = np.array([0.2, 0.02])
+dxmin = np.array([-0.2, -0.05])
 vLbi = nvi - dF
 vUbi = nvi + dF
 vLbf = nvf - dF
@@ -319,7 +319,7 @@ for i in range(nIterations):
                     objJacc[j,  k * nNode + j * nx + l] += coeff
                     objCacc[j, 0] += coeff * D[k * nNode + j * nx + l]
 
-    rho = np.identity(D.size) * 1e-3
+    rho = np.identity(D.size) * 1e-2
     Wx = np.identity(12)
     Wv = np.identity(2)
     #Wu = np.identity(conJequ.shape[0]) * 100
@@ -333,8 +333,8 @@ for i in range(nIterations):
     f = facc
     # Aeq = np.vstack((dynJ, collJx, collJv, collJu))
     # beq = np.vstack((dynC, collCx, collCv, collCu))
-    Aeq = np.vstack((endJ, endJu, endJv, dynJ, collJx, collJv, collJu, conJequ))
-    beq = np.vstack((endC, endCu, endCv, dynC, collCx, collCv, collCu, conCequ))
+    Aeq = np.vstack((endJ, endJu, dynJ, collJx, collJv, collJu, conJequ))
+    beq = np.vstack((endC, endCu, dynC, collCx, collCv, collCu, conCequ))
     Aeq, beq = removeNullConstraints(Aeq, beq, 1e-10)
     Ain = np.vstack((suppPolJF, conJinu, locConJxF))
     bin = np.vstack((suppPolCF, conCinu, locConCxF))

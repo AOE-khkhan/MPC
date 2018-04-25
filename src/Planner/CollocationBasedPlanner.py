@@ -4,10 +4,10 @@ import scipy as sci
 from src.Planner.HelperFuncs import *
 from matplotlib import pyplot as plt
 
-h = 0.30
+h = 0.35
 g = -9.81
 omegaSq = -g / h
-T = 0.1
+T = 1.0
 v = 0.2
 dF = 0.025
 # Decision variables [x0, x1, x2, x3, v0, v1, v2, v3]
@@ -21,7 +21,7 @@ objJ = np.array([[T0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                  [T0, T1, T2, T3, 0.0, 0.0, 0.0, 0.0],
                  [0.0, T0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                  [0.0, T0, 2.0 * T1, 3.0 * T2, 0.0, 0.0, 0.0, 0.0]])
-objC = np.array([[0.008],
+objC = np.array([[T*v/2.0],
                  [T*v/2.0],
                  [0.0],
                  [0.0]])
