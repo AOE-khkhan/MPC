@@ -65,10 +65,10 @@ D = np.zeros(((nodes - 1) * (2 * nx + nv + nu), 1))
 nodeT = [i * deltaT for i in range(nodes)]
 for i in range(nodes - 1):
     t = nodeT[i]
-    D[i * (2 * nx + nv + nu) + 0] = xi[0] + i * dx[0]
-    D[i * (2 * nx + nv + nu) + 1] = dx[0] / deltaT
-    D[i * (2 * nx + nv + nu) + nx] = xi[1] + i * dx[1]
-    D[i * (2 * nx + nv + nu) + nx + 1] = dx[1] / deltaT
+    D[i * (2 * nx + nv + nu) + 0] = xi[0] + 0 * dx[0]
+    D[i * (2 * nx + nv + nu) + 1] = 0 # dx[0] / deltaT
+    D[i * (2 * nx + nv + nu) + nx] = xi[1] + 0 * dx[1]
+    D[i * (2 * nx + nv + nu) + nx + 1] = 0 # dx[1] / deltaT
     if t <= tFlight:
         D[i * (2 * nx + nv + nu) + 2 * nx] = xi[0]
     elif t >= tLand:
@@ -77,10 +77,10 @@ for i in range(nodes - 1):
         D[i * (2 * nx + nv + nu) + 2 * nx] = 0.5 * (xf[0] + xi[0])
     D[i * (2 * nx + nv + nu) + 2 * nx + nv] = nui
 
-nIterations = 5
+nIterations = 4
 
 nNode = (2 * nx + nv + nu)
-#plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, -1)
+plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, -1)
 
 for i in range(nIterations):
     ## Setup end point constraints
@@ -315,7 +315,7 @@ for i in range(nIterations):
         for k in range(nodes - 1):
             for l in range(nx):
                 for m in range(l, nx + l):
-                    coeff = (deltaT ** m + 1) / (m + 1) * l * (l - 1) * (m - l) * (m - l - 1) * D[k * nNode + j * nx + m - l]
+                    coeff = (deltaT ** (m) + 1) / (m + 1) * l * (l - 1) * (m - l) * (m - l - 1) * D[k * nNode + j * nx + m - l]
                     objJacc[j,  k * nNode + j * nx + l] += coeff
                     objCacc[j, 0] += coeff * D[k * nNode + j * nx + l]
 
@@ -361,5 +361,6 @@ for i in range(nIterations):
     print("Iteration " + str(i) + " terminated with status " + output)
     optX = np.array(soln['x'])
     D = D + optX
-    if i == nIterations - 1:
-        plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i)
+    #if i == nIterations - 1:
+    plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i)
+

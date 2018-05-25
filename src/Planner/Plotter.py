@@ -85,8 +85,6 @@ def plotResults3D(f, m, n, mass, deltaT, x0, v0, g):
     pzPlot.set_xlabel('time')
     pzPlot.set_ylabel('PositionZ')
     pzPlot.grid()
-
-
     fig.show()
     pass
 

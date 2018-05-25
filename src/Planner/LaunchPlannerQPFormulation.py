@@ -23,7 +23,7 @@ v0 = 0.0  # m/s
 # vf is the critical parameter that must be achieved
 hDes = 0.0  # m
 g = -9.81  # m/s^2
-mass = 1/12  # kg
+mass = 18  # kg
 xf = 1.0
 vf = np.sqrt(-2.0 * g * hDes)  # m/s
 deltaT = 0.1 #1.0 / nodes  # s
