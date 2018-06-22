@@ -52,4 +52,3 @@ def removeNullConstraints(J, c, threshold):
             rowRemovalList.append(i)
     print("Removing " + str(len(rowRemovalList)) + " constraints")
     return np.delete(J, rowRemovalList, axis=0), np.delete(c, rowRemovalList, axis=0)
-

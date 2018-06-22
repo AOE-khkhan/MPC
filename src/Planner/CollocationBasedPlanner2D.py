@@ -19,26 +19,26 @@ solvers.options['abstol'] = 1e-5
 solvers.options['feastol'] = 1e-5
 solvers.options['maxiters'] = 500
 
-T = 1.0
-tFlight = 0.50
+T = 1.1
+tFlight = 0.40
 tLand = 0.60
 g = -9.81
-xi = np.array([-0.1, 0.35])
-vi = np.array([0.275, -0.1])
+xi = np.array([0.0, 0.435])
+vi = np.array([0.0, 0.0])
 ai = np.array([0.0, 0.0])
-xf = np.array([0.1, 0.35])
-vf = np.array([0.275, 0.1])
+xf = np.array([0.0, 0.435])
+vf = np.array([0.0, 0.0])
 af = np.array([0.0, 0.0])
 
-nvi = -0.06
-nvf = 0.06
+nvi = 0.0
+nvf = 0.0
 
 nui = -g / xi[1]
 nuf = -g / xf[1]
 
 dF = 0.025
-dxmax = np.array([0.2, 0.02])
-dxmin = np.array([-0.2, -0.05])
+dxmax = np.array([0.2, 0.015])
+dxmin = np.array([-0.2, -0.285])
 vLbi = nvi - dF
 vUbi = nvi + dF
 vLbf = nvf - dF
@@ -77,7 +77,7 @@ for i in range(nodes - 1):
         D[i * (2 * nx + nv + nu) + 2 * nx] = 0.5 * (xf[0] + xi[0])
     D[i * (2 * nx + nv + nu) + 2 * nx + nv] = nui
 
-nIterations = 4
+nIterations = 10
 
 nNode = (2 * nx + nv + nu)
 plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, -1)
@@ -315,11 +315,11 @@ for i in range(nIterations):
         for k in range(nodes - 1):
             for l in range(nx):
                 for m in range(l, nx + l):
-                    coeff = (deltaT ** (m) + 1) / (m + 1) * l * (l - 1) * (m - l) * (m - l - 1) * D[k * nNode + j * nx + m - l]
+                    coeff = (deltaT ** (m + 1)) / (m + 1) * l * (l - 1) * (m - l) * (m - l - 1) * D[k * nNode + j * nx + m - l]
                     objJacc[j,  k * nNode + j * nx + l] += coeff
                     objCacc[j, 0] += coeff * D[k * nNode + j * nx + l]
 
-    rho = np.identity(D.size) * 1e-2
+    rho = np.identity(D.size) * 1e-3
     Wx = np.identity(12)
     Wv = np.identity(2)
     #Wu = np.identity(conJequ.shape[0]) * 100
@@ -363,4 +363,3 @@ for i in range(nIterations):
     D = D + optX
     #if i == nIterations - 1:
     plotDataCollocationPlanner(nodes, nodeT, D, nx, nv, nu, i)
-
